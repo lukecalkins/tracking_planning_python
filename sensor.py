@@ -10,6 +10,9 @@ class Measurement:
     def getID(self):
         return self._ID
 
+    def getZ(self):
+        return self._z
+
 class Sensor:
     def __init__(self, z_dim):
         self.z_dim = z_dim
@@ -46,13 +49,12 @@ class BearingSensor(Sensor):
     def getJacobian(self, H, V, x, y):
         """
         :param H: reference to Sensor Jaobian
-        :param V: reference to sensor noise covariance
         :param x: ownship state
         :param y: Predicted target state
-        :return: no return, just modifying the H and V matrices passe by reference
+        :return: no return, just modifying the H and V matrices passed by reference
         """
         #z = restrict_angle(np.arctan2(y[1] - x[1], y[0] - x[0]) - x[2]) # Don't need bearing for Jacobian
-        range_squared = (y[0] - x[0])**2 + (y[1] - y[0])**2 # + 0.001 (prevent a divide by zero
+        range_squared = (y[0] - x[0])**2 + (y[1] - x[1])**2 # + 0.001 (prevent a divide by zero
         H[0, 0] = (x[1] - y[1])/range_squared
         H[0, 1] = (y[0] - x[0])/range_squared
         V[:] = self._b_sigma ** 2

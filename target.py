@@ -5,7 +5,7 @@ class Target:
     def __init__(self, state_init, cov_pos, cov_vel, samp, ID, y_dim):
         self._A = self.constructDynamics(samp)
         self._W = self.constructNoise(cov_pos, cov_vel)
-        self._state = state_init
+        self._state = np.array([state_init]).transpose()  # store as column vector
         self._ID = ID
         self._y_dim = y_dim
 
@@ -24,10 +24,10 @@ class Target:
 
     def forwardSimulate(self, steps):
 
-        self._state = self._A.dot(self._state)
+        self._state = self._A.dot(self._state) # + random noise drawn
 
     def getState(self):
-        return self._state
+        return np.copy(self._state)
 
     def getPosition(self):
         return self._state[0:2]
@@ -41,7 +41,7 @@ class Target:
     def getNoise(self):
         return self._W
 
-
+##############################################################
 
 class InfoTarget(Target):
 
@@ -60,6 +60,35 @@ class InfoTarget(Target):
         self._state = mean
         self.covariance = cov
 
+    def predictMeanAndCovariance(self, T=1):  # todo: add multiple prediction steps
+        self.mean_predict = self._A.dot(self._state)
+        self.cov_predict = np.matmul(self._A, np.matmul(self.covariance, self._A.transpose())) + self._W
+
+    def set_z_predict_and_innovation_covariance(self, z_predict, H, V):
+        self.z_predict = np.array([z_predict])
+        self.innovation_cov = np.matmul(H, np.matmul(self.cov_predict, H.transpose())) + V
+        self.filter_gain_matrix = self.cov_predict @ H.transpose() @ np.linalg.inv(self.innovation_cov)
+
+    def set_gate_volume(self, level):
+        """
+        Set the gate volume given the current target prediction
+        :param level:
+        :return:
+        """
+        if level == 0.95:
+            k_alpha = 3.84
+        elif level == 0.99:
+            k_alpha = 6.64
+        elif level == 0.999:
+            k_alpha = 10.83
+        else:
+            print("Desired gating level not found")
+
+        self.gate_volume = 2 * np.sqrt(k_alpha) * np.sqrt(np.linalg.det(self.innovation_cov))
+
+##############################################################
+######## Target Models #######################################
+##############################################################
 
 class TargetModel:
 
@@ -103,6 +132,7 @@ class TargetModel:
 
         return result
 
+##############################################################
 
 class InfoTargetModel(TargetModel):
 
@@ -141,6 +171,9 @@ class InfoTargetModel(TargetModel):
             target.updateBelief(targ_mean, targ_cov)
 
             index = index + target._y_dim
+
+
+
 
 
 

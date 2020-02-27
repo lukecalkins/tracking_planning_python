@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 plt.rcParams['axes.grid'] = True
+import numpy as np
 
 class StatePlotter:
 
@@ -42,6 +43,22 @@ class StatePlotter:
 
         self.ax.plot(x, y, clr, marker='o', markersize=size)
 
+    def draw_cov(self, mean, cov, confidence):
+        #manual entries for plotter checking
+        #cov = np.array([[225, 0], [0, 225]])
+        #mean = np.array([50, 50])
+
+        s = -2 *np.log(1 - confidence)
+        w, V = np.linalg.eig(s * cov)
+        t = np.linspace(0, 2*np.pi, 100)
+        D = np.array([[np.sqrt(w[0]), 0], [0, np.sqrt(w[1])]])
+
+        Q = np.matmul(V, D)
+        a = np.matmul(Q, np.array([np.cos(t), np.sin(t)]))
+        b = 1
+        self.ax.plot(a[0, :] + mean[0], a[1, :] + mean[1], 'r')
+
+
     def plot_state(self, robots, targets, robot_size=1, target_size=1):
 
         self.clear_plot()
@@ -50,6 +67,12 @@ class StatePlotter:
         for robot in robots:
             pose = robot.getState()
             self.draw_robot(pose, size=robot_size)
+
+            for ID in robot.tmm.targets:
+                target = robot.tmm.getTargetByID(ID)
+                mean = target.getState()[:2]
+                cov = target.getCovariance()[:2, :2]
+                self.draw_cov(mean, cov, confidence=0.95)
 
         for target in targets:
             target_state = target.getState()
