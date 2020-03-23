@@ -1,12 +1,14 @@
 import itertools as IT
 import numpy as np
 from utils import restrict_angle
+from sensor import Measurement
 
 class JPDAF:
 
-    def __init__(self, detection_prob, gate_level=0.99):
+    def __init__(self, detection_prob, gate_level=0.99, verbose = False):
         self._detection_prob = detection_prob
         self._gate_level = gate_level
+        self._verbose = verbose
 
     def filter(self, measurements, robot, targetIDs, clutter_density):
         """
@@ -19,29 +21,26 @@ class JPDAF:
         """
 
         Omega = self.gate_measurements(measurements, robot, targetIDs, self._gate_level)
+        if self._verbose:
+            print("Omega: ", Omega, "\n")
+
         event_matrices = self.generate_association_events(Omega)
         event_probabilities = self.get_event_probabilities(event_matrices, measurements, robot, targetIDs,
                                                            clutter_density)
-
         #calculate association probabilites
         association_probability_matrix = np.zeros((Omega.shape[0] + 1, Omega.shape[1] - 1))
         self.get_association_probabilities(association_probability_matrix, event_matrices, event_probabilities)
-
-        #add last row of association probability matrix = probability none of the mesasurements originated from target
-        for i in range(association_probability_matrix.shape[1]):
-            association_probability_matrix[-1, i] = 1 - association_probability_matrix[:-1, i].sum()
-
-        print(association_probability_matrix)
 
         #with association probabilities, the weighted innovation and innovation covariance for each target can be calculated
         self.update_estimates(association_probability_matrix, measurements, robot, targetIDs)
 
     def update_estimates(self, prob_mat, measurements, robot, targetIDs):
         """
-
-        :param prob_mat:
-        :param robot:
-        :param targetIDs:
+        function that obtains the weighted innovation and weighted covariance matrix and updates the respective targets
+        mean and covariances through the EKF
+        :param prob_mat: association prob matrix with num_rows=num_measurements + 1 (not detected), num_cols = num_targets
+        :param robot: robot object
+        :param targetIDs: list of target IDs to iterate over
         :return:
         """
 
@@ -59,7 +58,7 @@ class JPDAF:
 
     def get_P_k(self, prob_mat_column, measurements, info_target, weighted_innovation):
         """
-        function to generatef the P_k matrix (fortman1983sonar)
+        function to generate the P_k matrix (fortman1983sonar) used in covariance update equation
         :param prob_mat_column: association probability matrix column corresponding to target in question
         :param measurements:
         :param info_target:
@@ -86,7 +85,7 @@ class JPDAF:
         :param prob_mat_column: only the column of the association matrix relavent to the target in question
         :param measurements:
         :param info_target: target in question getting weighted innovation for
-        :return:
+        :return: weighted innovation measurement
         """
         weighted_innovation = np.array([[0.]])
         z_predict = info_target.z_predict
@@ -97,6 +96,15 @@ class JPDAF:
         return weighted_innovation
 
     def get_association_probabilities(self, prob_mat, event_matrices, event_probabilities):
+        """
+        functiont that takes the full probability matrix as reference and each even matrix and
+        its corresponding probability and gets the association probability for each measurement to
+        each target
+        :param prob_mat: reference to probablilty matrix (num_meas X num_targets + 1)
+        :param event_matrices: list of each distinct even
+        :param event_probabilities: corresponding probabilities of each event
+        :return: None (prob_mat passed in by reference is updated)
+        """
         for i in range(event_matrices[0].shape[0]):
             for j in range(event_matrices[0].shape[1] - 1):
                 # calculate probability of measurement i is associated to target j
@@ -107,6 +115,10 @@ class JPDAF:
                 if sum(event_indicators) != 0:
                     relevant_event_probs = [event_probabilities[i] if event_indicators[i] == 1 else 0 for i in range(len(event_indicators))]
                     prob_mat[i, j] = sum(relevant_event_probs)
+
+        # add last row of association probability matrix = probability none of the mesasurements originated from target
+        for i in range(prob_mat.shape[1]):
+            prob_mat[-1, i] = 1 - prob_mat[:-1, i].sum()
 
         return None
 
@@ -124,7 +136,7 @@ class JPDAF:
 
         event_probs = np.array([])
         for event in event_matrices:
-            num_false_alarms = event.sum(axis=0)[0]  # sum fist column
+            num_false_alarms = event.sum(axis=0)[0]  # sum first column
             event_prob = 1  # start running product
             for i in range(event.shape[0]):
                 if event[i, 1:].sum() != 0:
@@ -132,7 +144,7 @@ class JPDAF:
                     likelihood = self.get_measurement_likelihood(event[i, :], measurements[i], robot, targetIDs)
                     event_prob = event_prob * likelihood
 
-            #find detected/undetecdet targets ans multiply by detection probabilities (or 1 - detection probability)
+            #find detected/undetected targets and multiply by detection probabilities (or 1 - detection probability)
             for i in range(1, event.shape[1]):
                 if event[:, i].sum() == 1:
                     event_prob = event_prob * self._detection_prob
@@ -144,7 +156,13 @@ class JPDAF:
             event_prob = event_prob * density ** num_false_alarms
             event_probs = np.append(event_probs, event_prob)
 
-        #event probabilites are normalized currently. Dividing by the sum of all of them will make them valid probablies
+
+        if self._verbose:
+            for event in event_matrices:
+                print(event)
+            print(event_probs, "sum event probs", event_probs.sum())
+
+        # event probabilites are normalized currently. Dividing by the sum of all of them will make them valid probablies
         event_probs = event_probs/event_probs.sum()
 
         return event_probs
@@ -180,11 +198,11 @@ class JPDAF:
 
         return pdf_val
 
-
     def gate_measurements(self, measurements, robot, targetIDs, level=0.99):
         """
         Function that creates the fully populated gated matrix encoding all possible data association events based on
-        the one dimensional bearing measurument with linearized  measurement model.
+        the one dimensional bearing measurement with linearized  measurement model.
+        THIS FUNCTION PREDICTS THE MEAN AND COVARIANCE STEPS AND STORE FOR EACH
         :param measurements:
         :param robot:
         :param level:
@@ -206,7 +224,6 @@ class JPDAF:
             info_target.set_z_predict_and_innovation_covariance(z_predict, H, V)
             info_target.set_gate_volume(level)
 
-
         n_rows = len(measurements)
         # n_cols = robot.tmm.num_targets()
         Omega = np.zeros((n_rows, num_targets + 1))  # add another column for false alarm measurements
@@ -220,8 +237,6 @@ class JPDAF:
             for j in range(n_rows):
                 Omega[j, i + 1] = self.gateMeasurementToTarget(robot.tmm.getTargetByID(targetIDs[i]), measurements[j],
                                                                level)
-
-
         return Omega
 
     def gateMeasurementToTarget(self, target, measurement, level):
@@ -237,7 +252,6 @@ class JPDAF:
             return 0  # measurement outside gate
         else:
             return 1
-
 
     def generate_association_events(self, Omega):
         """
@@ -262,16 +276,19 @@ class JPDAF:
                     col_indicators.append(j)
             rows_lists.append(col_indicators)
 
-
         all_events = list(IT.product(*rows_lists))  # this list satisfies one mark per row
-        print("Possible permutations: "+ str(len(all_events)))
         valid_events = self.get_valid_events(all_events,  n_cols)
-
         event_matrices = self.generate_valid_event_matrices(valid_events, n_cols)
 
         return event_matrices
 
     def generate_valid_event_matrices(self, valid_events, n_cols):
+        """
+        function that generates valid event matrices with a list ot event tuples
+        :param valid_events:
+        :param n_cols:
+        :return:
+        """
 
         n_rows = len(valid_events[0])
         event_mat_list = []
@@ -306,6 +323,41 @@ class JPDAF:
                 valid_events.append(all_events[i])
 
         return valid_events
+
+
+########################
+###### end JPDAF #######
+########################
+
+def add_masked_measurements_2targ(measurements, robot, targetIDs, proximity):
+    """
+    function that detects if a marking event is occurring among targets being tracked. If so, it adds artificial
+    measurements to the existing measurements set that have already been generated and passed to the function
+    :param measurements:
+    :param robot:
+    :param targetIDs:
+    :param proximity: proximity in degrees of a masking event
+    :return:
+    """
+
+    target_dist = []
+    target_bearing = []
+    own_state = robot.getState()
+    for i in range(len(targetIDs)):
+        info_target = robot.tmm.getTargetByID(targetIDs[i])
+        dist = np.linalg.norm(info_target.getPosition() - own_state[0:2])
+        target_dist.append(dist)
+        mean_predict = info_target._A @ info_target._state
+        z_predict = robot.sensor.observationModel(own_state, info_target.getState())
+        target_bearing.append(z_predict)
+
+    delta_bearing = restrict_angle(np.linalg.norm(target_bearing[0] - target_bearing[1]))
+    print("Delta bearing in Masked function = ", delta_bearing * 180. / np.pi, " degrees")
+    if np.abs(delta_bearing) < (np.pi / 180 * proximity):
+        # find which target is closer to sensor and delete that targets measurement
+        max_ndx = np.argmax(target_dist)
+        measurements.append(Measurement(target_bearing[max_ndx], 0, 1))  # todo: do we need actual infered ID of target?
+        print("adding artificial measurement")
 
 
 

@@ -13,12 +13,14 @@ class Robot:
     def applyControl(self, action, dt):
         speed = action[0]
         turn_rate = action[1]
-        self._state[0] = self._state[0] + speed * np.cos(self._state[2])
-        self._state[1] = self._state[1] + speed * np.sin(self._state[2])
+        self._state[0] = self._state[0] + speed * np.cos(self._state[2])*dt
+        self._state[1] = self._state[1] + speed * np.sin(self._state[2])*dt
         self._state[2] = self._state[2] + turn_rate * dt
 
     def getState(self):
-        return self._state
+        return np.copy(self._state)
+
+
 
 
 

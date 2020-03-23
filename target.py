@@ -30,7 +30,7 @@ class Target:
         return np.copy(self._state)
 
     def getPosition(self):
-        return self._state[0:2]
+        return np.copy(self._state[0:2])
 
     def getID(self):
         return self._ID
@@ -85,6 +85,7 @@ class InfoTarget(Target):
             print("Desired gating level not found")
 
         self.gate_volume = 2 * np.sqrt(k_alpha) * np.sqrt(np.linalg.det(self.innovation_cov))
+        print("Gate volume: ", self.gate_volume * 180/np.pi, " degrees")
 
 ##############################################################
 ######## Target Models #######################################
@@ -96,9 +97,11 @@ class TargetModel:
         self.targets = {}
         self.target_dim = 0
 
+
     def addTarget(self, ID, target):
         self.targets[ID] = target
         self.target_dim += target._y_dim
+
 
     def getTargetState(self):
 
@@ -155,6 +158,12 @@ class InfoTargetModel(TargetModel):
         return result
 
     def getJacobian(self, A_, W_):
+        """
+        sets system wide noise and covariance by passing as reference
+        :param A_:
+        :param W_:
+        :return:
+        """
         A_[:, :] = self.getSystemMatrix()
         W_[:, :] = self.getNoiseMatrix()
 
@@ -173,7 +182,21 @@ class InfoTargetModel(TargetModel):
             index = index + target._y_dim
 
 
+    def predictTargetState(self, T):
+        """
+        function that will take the sytem of targets stored in the info model and precit T steps into the future
+        :param T: Number of timesteps
+        :return: list of targets states (length T + 1)
+        """
 
+        target_history = []
+        target_state = self.getTargetState()
+        A = self.getSystemMatrix()
+        for i in range(T + 1):
+            target_history.append(target_state)
+            target_state = A @ target_state
+
+        return target_history
 
 
 

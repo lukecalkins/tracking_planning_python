@@ -19,23 +19,54 @@ class Sensor:
 
 class BearingSensor(Sensor):
 
-    def __init__(self, min_range, max_range, min_hang, max_hang, b_sigma):
+    def __init__(self, min_range, max_range, min_hang, max_hang, b_sigma, detection_prob):
         Sensor.__init__(self, 1)              #scalar measurement for bearing only
         self._min_range = min_range
         self._max_range = max_range
         self._min_hang = min_hang
         self._max_hang = max_hang
         self._b_sigma = b_sigma
+        self._detection_prob = detection_prob
 
     def senseTargets(self, own_state, targets):
 
         output = []
         for target in targets:
             measurement = self.sense(own_state, target)
-            output.append(measurement)
+            prob = np.random.uniform(0, 1)
+            if prob <= self._detection_prob:
+                output.append(measurement)
 
         return output
 
+    def senseTargets_interference_2(self, own_state, targets, proximity):
+        """
+        function that will create vector of target measurements for 2 targets only where targets close in bearing are
+        masked. If targets are within proimity parameter in bearing, only the louder one is sensed.
+        :param own_state: state vector of ownship (pos_x, pos_y, heading)
+        :param targets: list of ground truth targets
+        :param proximity: proximity (in degrees) in which targets mask each other
+        :return:
+        """
+
+        target_dist = []
+        output = []
+        for target in targets:
+            dist = np.linalg.norm(target.getPosition() - own_state[0:2])
+            target_dist.append(dist)
+            measurement = self.sense(own_state, target)
+            output.append(measurement)
+
+        # calculate distance between 2 targets
+        delta_bearing = restrict_angle(np.linalg.norm(output[0].getZ() - output[1].getZ()))
+        print("Delta bearing = ", delta_bearing*180./np.pi, " degrees")
+        if np.abs(delta_bearing) < (np.pi/180 * proximity):
+            # find which target is closer to sensor and delete that targets measurement
+            max_ndx = np.argmax(target_dist)
+            del output[max_ndx]
+            print("Target marking occuring, number of target measurements occuring = ", len(output))
+
+        return output
 
     def sense(self, x, target):
         y = target.getPosition()
@@ -75,3 +106,22 @@ class BearingSensor(Sensor):
         """
         return restrict_angle(np.arctan2(y[1] - x[1], y[0] - x[0]) - x[2])
 
+def add_clutter(measurements, density, volume = 2*np.pi):
+    """
+    function to take a list of measurements and add additional clutter to it given a clutter density/unit volume. For a
+    1D sensing problem such as bearing only, volume = length of bearing FOV.
+    :param measurements:
+    :param density:
+    :param volume:
+    :return:
+    """
+
+    # draw from Poisson distribution with rate = density*volume
+    rate = density * volume
+    num_clutter = np.random.poisson(rate, 1)
+
+    #However many clutter measurements are generated, uniformly place them in the "volume"
+    if num_clutter != 0:
+        bearings = np.random.uniform(0, volume, num_clutter)
+        for i in range(bearings.shape[0]):
+            measurements.append(Measurement(bearings[i], 0, 1))  # all clutter measurements get ID of 0

@@ -68,3 +68,23 @@ def MultiTargetFilter(measurements, robot, debug = False):
     result = KalmanFilter(mean_prior, cov_prior, A, W, H, V, innovation, debug=False)
 
     return result
+
+def KalmanFilterCovAndInnovationCov(cov_prior, A, W, H, V, debug=False):
+    """
+    function to compute Kalman Filter update on covariance only and also return innovation covariance to be used in
+    measurement gating
+    :param cov_prior:
+    :param A: target state transition matrix
+    :param W: target state transition noise covariance
+    :param H: linearized target measurement model matrix
+    :param V: measurement model covariance
+    :param debug: parameter to include verbose debugging
+    :return: tuple of updated covariance and innovation covariance
+    """
+
+    cov_predict = A @ cov_prior @ A.transpose() + W
+    innovation_cov = H @ cov_predict @ H.transpose() + V
+    kalman_gain = cov_predict @ H.transpose() @ np.linalg.inv(innovation_cov)
+    cov_update = (np.eye(cov_prior.shape[0]) - kalman_gain @ H) @ cov_predict
+
+    return cov_update, innovation_cov
