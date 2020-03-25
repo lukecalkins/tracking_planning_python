@@ -126,3 +126,19 @@ class StatePlotter:
         """
         kwargs_write = {'fps': fps, 'quantizer': 'nq'}
         imageio.mimsave('../results/videos/' + filename + '.gif', self.images, fps=fps)
+
+
+def draw_cov(mean, cov, confidence, ax, clr='r'):
+        #manual entries for plotter checking
+        #cov = np.array([[225, 0], [0, 225]])
+        #mean = np.array([50, 50])
+
+        s = -2 * np.log(1 - confidence)
+        w, V = np.linalg.eig(s * cov)
+        t = np.linspace(0, 2*np.pi, 100)
+        D = np.array([[np.sqrt(w[0]), 0], [0, np.sqrt(w[1])]])
+
+        Q = np.matmul(V, D)
+        a = np.matmul(Q, np.array([np.cos(t), np.sin(t)]))
+        b = 1
+        ax.plot(a[0, :] + mean[0], a[1, :] + mean[1], clr)

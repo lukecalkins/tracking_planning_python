@@ -69,23 +69,26 @@ if __name__ == '__main__':
     targets = [target1, target2]
 
     #actions
-    turn_radius = 50.
+    turn_radius = 20.
     speed = 5.
     actions = [[speed, 0], [speed, speed/turn_radius], [speed, -speed/turn_radius]]
 
     JPDA = DA.JPDAF(detection_prob=detection_prob, gate_level=0.99, verbose=False)
     gate_cost = GateOverlapCost(y_dim=4, level=0.99)
     log_det_cost = LogDetCost(y_dim=4)
+    planner_log = '../log/plan.log'
+    targ_log = '../log/targ.log'
     planner = plan.Planner(actions, log_det_cost)
     plan_horizon = 10
+
 
     for kk in range(T):
         #print('True     : ', targets[0].getState())
         #print('Estimated: ', robot.tmm.targets[100].getState())
 
         for i in range(len(robots)):
-            measurements = robots[i].sensor.senseTargets(robots[i].getState(), targets)
-            #measurements = robots[i].sensor.senseTargets_interference_2(robots[i].getState(), targets, proximity)
+            #measurements = robots[i].sensor.senseTargets(robots[i].getState(), targets)
+            measurements = robots[i].sensor.senseTargets_interference_2(robots[i].getState(), targets, proximity)
             #DA.add_masked_measurements_2targ(measurements, robot, target_ID, proximity)
             add_clutter(measurements, clutter_density)
             JPDA.filter(measurements, robot, target_ID, clutter_density)
@@ -107,4 +110,4 @@ if __name__ == '__main__':
 
         print("Timestep: ", kk)
 
-    plotter.save_video(filename='2_targ_RVI_logdet_unmasked', fps=30)
+    plotter.save_video(filename='2_targ_FVI_logdet_masked_10', fps=30)

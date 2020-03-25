@@ -4,8 +4,8 @@ import numpy as np
 
 def propagateOwnshipEuler(osOld, speed, turnRateCommand, dt):
     osNew = copy(osOld)
-    osNew[0] = osOld[0] + speed * np.cos(osOld[0]) * dt
-    osNew[1] = osOld[1] + speed * np.sin(osOld[1]) * dt
+    osNew[0] = osOld[0] + speed * np.cos(osOld[2]) * dt
+    osNew[1] = osOld[1] + speed * np.sin(osOld[2]) * dt
     osNew[2] = osOld[2] + turnRateCommand * dt
 
     return osNew

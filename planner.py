@@ -32,6 +32,7 @@ class SearchNode(Node):
     def _make_child(self, action):
         child = SearchNode(deepcopy(self.state), self.robot, self.cost_func, self, action)
         child.state.move(action)
+        child.state.inn_cov = []  # reset inn cov to empty
         child.state.filter_cov(self.robot, child.depth)
         child.state.total_cost = self.state.total_cost + child.state.get_cost(self.cost_func, child.depth)
 
@@ -80,6 +81,7 @@ class SearchState:
         elif isinstance(cost_func, LogDetCost):
             cost = cost_func.getCost(self.Sigma)
             self.node_cost = cost
+            #print(cost)
             return cost
 
         else:
@@ -108,10 +110,12 @@ class SearchState:
 
 
 class Planner:
-    def __init__(self, actions, cost_function, dt=1):
+    def __init__(self, actions, cost_function, dt=1, logfile=None, targ_log=None):
         self.actions = actions
         self.cost_function = cost_function
         self.dt = dt
+        self.logfile = logfile
+        self.targ_log = targ_log
 
 
     def planFVI(self, robot, T, debug=False):
@@ -140,9 +144,18 @@ class Planner:
 
         self.get_optimal_path(optimal_node, path_to_node)
 
+        if self.logfile != None:
+            self.log_planner_data(root, path_to_node, self.logfile)
+            self.log_target_state(root, path_to_node, self.targ_log)
+
         return path_to_node
 
 
+    def plan_RVI(self, robot, T, delta, eps, debug=False):
+
+
+
+        return 0
 
     def get_optimal_path(self, node, path):
         """
@@ -154,3 +167,37 @@ class Planner:
         while node.parent != None:
             path.insert(0, node.action)
             node = node.parent
+
+    def log_target_state(self, root, path, file):
+        curr_node = root
+        t = 0
+        f = open(file, 'a')
+        while True:
+            np.savetxt(f, curr_node.state.targ_state[curr_node.depth])
+            if curr_node.children == ():
+                break
+            child = [node for node in curr_node.children if node.action == path[t]]
+            t += 1
+            curr_node = child[0]
+        f.close()
+
+
+    def log_planner_data(self, root, path, file):
+        """
+        function to log the data over the optimal path a computed planning tree
+        :param root:
+        :param path: list of actions to take from root node
+        :return:
+        """
+        curr_node = root
+        t = 0
+        f = open(self.logfile, 'a')
+        while True:
+            array_list = curr_node.state.Sigma.tolist()
+            np.savetxt(f, curr_node.state.Sigma)
+            if curr_node.children == ():
+                break
+            child = [node for node in curr_node.children if node.action == path[t]]
+            t += 1
+            curr_node = child[0]
+        f.close()
