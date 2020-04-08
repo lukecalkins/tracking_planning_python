@@ -17,6 +17,30 @@ class LogDetCost(CostFunction):
         #print("Log det Sigma = ", cost)
         return cost
 
+class DeltaBearingCost(CostFunction):
+
+    def __init__(self, y_dim):
+        CostFunction.__init__(self)
+        self.y_dim = y_dim
+
+    def getCost(self, x, y):
+
+        num_targets = int(len(y)/self.y_dim)
+        bearing_diffs = []
+        for i in range(num_targets):
+            for j in range(i + 1, num_targets):
+                targ_pos1 = y[i * self.y_dim:i * self.y_dim + 2]
+                targ_pos2 = y[j * self.y_dim:j * self.y_dim + 2]
+                bearing1 = restrict_angle(np.arctan2(targ_pos1[1] - x[1], targ_pos1[0] - x[0]) - x[2])
+                bearing2 = restrict_angle(np.arctan2(targ_pos2[1] - x[1], targ_pos2[0] - x[0]) - x[2])
+
+                # above angles in range [-pi to pi],
+                bearing_diffs.append(np.abs(restrict_angle(bearing1 - bearing2)))
+
+        # want to maximize the difference, therefore minimize the negative
+        bearing_diffs_neg = [-1 * diff for diff in bearing_diffs]
+        return sum(bearing_diffs_neg)
+
 class GateOverlapCost(CostFunction):
 
     def __init__(self, y_dim, level):
@@ -40,6 +64,7 @@ class GateOverlapCost(CostFunction):
         :return: cost of the search node
         """
 
+        #print('inn_cov_list size = ', len(inn_cov_list))
 
         num_targets = int(len(y)/self.y_dim)
         gates = []                          # list of gate volumes for each target
@@ -62,7 +87,7 @@ class GateOverlapCost(CostFunction):
                 c = gates[j][0]
                 d = gates[j][1]
                 # map to [0, 2pi]
-                a, b, c, d, = a + np.pi, b + np.pi, c + np. pi, d + np.pi
+                a, b, c, d, = a + np.pi, b + np.pi, c + np.pi, d + np.pi
                 overlap = self.get_overlapped_bearing(a, b, c, d)
                 total_volume += overlap
 

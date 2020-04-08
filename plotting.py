@@ -20,6 +20,7 @@ import numpy.linalg as LA
 import pdb
 import imageio
 from matplotlib.lines import Line2D
+from utils import *
 
 class StatePlotter:
 
@@ -61,7 +62,7 @@ class StatePlotter:
         # Construct Triangle Polygon.
         XY = np.array([[x + size * np.cos(th), x + size * np.cos(th - 2.7), x + size * np.cos(th + 2.7)],
                        [y + size * np.sin(th), y + size * np.sin(th - 2.7), y + size * np.sin(th + 2.7)]]).transpose()
-        return self.ax.add_patch(patches.Polygon(XY, facecolor=clr, zorder=5))
+        return self.ax.add_patch(patches.Polygon(XY, facecolor=clr, zorder=2, alpha=0.5))
 
     def draw_target(self, state, clr = 'r', size = 1):
 
@@ -85,16 +86,29 @@ class StatePlotter:
         b = 1
         self.ax.plot(a[0, :] + mean[0], a[1, :] + mean[1], clr)
 
+    def draw_planned_path(self, pose, planner_output):
+        pos_x = [pose[0]]
+        pos_y = [pose[1]]
+        for i in range(len(planner_output)):
+            pose = propagateOwnshipEuler(pose, planner_output[i][0], planner_output[i][1], 1)
+            pos_x.append(pose[0])
+            pos_y.append(pose[1])
+        self.ax.plot(pos_x, pos_y, 'k-', zorder=3)
 
-    def plot_state(self, robots, targets, robot_size=1, target_size=1):
+
+    def plot_state(self, robots, targets, planner_output = None, masked = False, robot_size=1, target_size=1):
 
         self.clear_plot()
         self.draw_env()
+        if masked == True:
+            self.ax.set_title("MASKED!")
         clr_list = ['r', 'b']
 
         for robot in robots:
             pose = robot.getState()
             self.draw_robot(pose, size=robot_size)
+            if planner_output != None:
+                self.draw_planned_path(pose, planner_output)
 
             info_ndx = 0
             for ID in robot.tmm.targets:
@@ -125,7 +139,7 @@ class StatePlotter:
         :return:
         """
         kwargs_write = {'fps': fps, 'quantizer': 'nq'}
-        imageio.mimsave('../results/videos/' + filename + '.gif', self.images, fps=fps)
+        imageio.mimsave('../results/videos/' + filename + '.mp4', self.images, fps=fps)
 
 
 def draw_cov(mean, cov, confidence, ax, clr='r'):

@@ -76,12 +76,19 @@ class SearchState:
         if isinstance(cost_func, GateOverlapCost):
             cost = cost_func.getCost(self.state, self.targ_state[depth], self.inn_cov)
             self.node_cost = cost
+            if cost < 0:
+                raise SystemExit
             return cost
 
         elif isinstance(cost_func, LogDetCost):
             cost = cost_func.getCost(self.Sigma)
             self.node_cost = cost
             #print(cost)
+            return cost
+
+        elif isinstance(cost_func, DeltaBearingCost):
+            cost = cost_func.getCost(self.state, self.targ_state[depth])
+            self.node_cost = cost
             return cost
 
         else:
@@ -110,13 +117,13 @@ class SearchState:
 
 
 class Planner:
-    def __init__(self, actions, cost_function, dt=1, logfile=None, targ_log=None):
+    def __init__(self, actions, cost_function, final_cost=False, dt=1, logfile=None, targ_log=None):
         self.actions = actions
         self.cost_function = cost_function
         self.dt = dt
         self.logfile = logfile
         self.targ_log = targ_log
-
+        self.final_cost = final_cost
 
     def planFVI(self, robot, T, debug=False):
 
@@ -138,7 +145,12 @@ class Planner:
 
         #get output path from final node cost
         leaves = root.leaves
-        optimal_node_idx = np.argsort([node.state.total_cost for node in leaves])[0]
+        if self.final_cost == True:
+            optimal_node_idx = np.argsort([node.state.node_cost for node in leaves])[0]
+            print("Using final node cost")
+        else:
+            optimal_node_idx = np.argsort([node.state.total_cost for node in leaves])[0]
+            print("using total node cost")
         optimal_node = leaves[optimal_node_idx]
         path_to_node = []  # will be populated
 
@@ -153,13 +165,11 @@ class Planner:
 
     def plan_RVI(self, robot, T, delta, eps, debug=False):
 
-
-
         return 0
 
     def get_optimal_path(self, node, path):
         """
-        populates empty list while finding path from root of
+        populates empty list of actions while finding path from root of to the given optimal node
         :param node:
         :param path:
         :return:

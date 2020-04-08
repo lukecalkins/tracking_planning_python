@@ -51,6 +51,7 @@ class BearingSensor(Sensor):
 
         target_dist = []
         output = []
+        masked = False
         for target in targets:
             dist = np.linalg.norm(target.getPosition() - own_state[0:2])
             target_dist.append(dist)
@@ -65,8 +66,9 @@ class BearingSensor(Sensor):
             max_ndx = np.argmax(target_dist)
             del output[max_ndx]
             print("Target marking occuring, number of target measurements occuring = ", len(output))
+            masked = True
 
-        return output
+        return output, masked
 
     def sense(self, x, target):
         y = target.getPosition()

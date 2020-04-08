@@ -69,45 +69,53 @@ if __name__ == '__main__':
     targets = [target1, target2]
 
     #actions
-    turn_radius = 20.
-    speed = 5.
+    turn_radius = 50.
+    speed = 10.
     actions = [[speed, 0], [speed, speed/turn_radius], [speed, -speed/turn_radius]]
 
     JPDA = DA.JPDAF(detection_prob=detection_prob, gate_level=0.99, verbose=False)
-    gate_cost = GateOverlapCost(y_dim=4, level=0.99)
     log_det_cost = LogDetCost(y_dim=4)
+    gate_cost = GateOverlapCost(y_dim=4, level=0.99)
+    delta_bearing_cost = DeltaBearingCost(y_dim=4)
     planner_log = '../log/plan.log'
     targ_log = '../log/targ.log'
-    planner = plan.Planner(actions, log_det_cost)
+    planner = plan.Planner(actions, log_det_cost, final_cost=True)
     plan_horizon = 10
+    n_controls = 5  # number of steps to take before replanning
 
-
+    np.random.seed(42)
     for kk in range(T):
         #print('True     : ', targets[0].getState())
         #print('Estimated: ', robot.tmm.targets[100].getState())
 
         for i in range(len(robots)):
-            #measurements = robots[i].sensor.senseTargets(robots[i].getState(), targets)
-            measurements = robots[i].sensor.senseTargets_interference_2(robots[i].getState(), targets, proximity)
+            measurements = robots[i].sensor.senseTargets(robots[i].getState(), targets)
+            #measurements, masked = robots[i].sensor.senseTargets_interference_2(robots[i].getState(), targets, proximity)
             #DA.add_masked_measurements_2targ(measurements, robot, target_ID, proximity)
             add_clutter(measurements, clutter_density)
             JPDA.filter(measurements, robot, target_ID, clutter_density)
             #output = KF.MultiTargetFilter(measurements, robots[i], debug=False)
             #robots[i].tmm.updateBelief(output)
 
-        for robot in robots:
-            planner_output = planner.planFVI(robot, plan_horizon)
+
+        '''
+        if kk % n_controls == 0:
+            for robot in robots:
+                planner_output = planner.planFVI(robot, plan_horizon)
 
         print("planner output", planner_output)
         for robot in robots:
-            robot.applyControl(planner_output[0], 1)
+            print("plan_output length = ", len(planner_output))
+            robot.applyControl(planner_output.pop(0), 1)
+        '''
 
         for target in targets:
             target.forwardSimulate(1)
 
-        plotter.plot_state(robots, targets, robot_size=50, target_size=10)
+        plotter.plot_state(robots, targets, planner_output,
+                           masked=masked, robot_size=50, target_size=10)
         plt.pause(0.1)
 
         print("Timestep: ", kk)
 
-    plotter.save_video(filename='2_targ_FVI_logdet_masked_10', fps=30)
+    plotter.save_video(filename='planning/2_targ_FVI_log_det_masked_10_final_cost_speed_10', fps=5)
