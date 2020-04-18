@@ -94,7 +94,7 @@ class InfoTarget(Target):
 class TargetModel:
 
     def __init__(self):
-        self.targets = {}
+        self.targets = {}  # todo: make this not a dictionary but a list so you can loop through targets predictably
         self.target_dim = 0
 
 

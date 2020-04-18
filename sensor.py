@@ -1,5 +1,6 @@
 import numpy as np
 from utils import restrict_angle
+from copy import copy
 
 class Measurement:
     def __init__(self, z, ID, size):
@@ -12,6 +13,9 @@ class Measurement:
 
     def getZ(self):
         return self._z
+
+    def get_z_dim(self):
+        return copy(self._z_dim)
 
 class Sensor:
     def __init__(self, z_dim):

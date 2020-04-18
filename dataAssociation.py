@@ -66,7 +66,7 @@ class JPDAF:
         :return:
         """
 
-        weighted_innovation_outer_product = np.zeros(weighted_innovation.shape)
+        weighted_innovation_outer_product = np.zeros((weighted_innovation.shape[0], weighted_innovation.shape[0]))
         z_predict = info_target.z_predict
         for i in range(len(measurements)):
             if prob_mat_column[i] != 0:

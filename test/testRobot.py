@@ -6,6 +6,7 @@ from sensor import *
 import pdb
 import kalmanFilter as KF
 import dataAssociation as DA
+import dataAssociationPlan as DAP
 import planner as plan
 from cost_function import *
 
@@ -46,7 +47,7 @@ if __name__ == '__main__':
                              target_init_cov_pos, target_init_cov_vel)
 
     #Sensor parameters
-    detection_prob = 0.3
+    detection_prob = 1.0
     sense_min_range = 0
     sense_max_range = 1000
     sense_min_hang = -180
@@ -79,7 +80,10 @@ if __name__ == '__main__':
     delta_bearing_cost = DeltaBearingCost(y_dim=4)
     planner_log = '../log/plan.log'
     targ_log = '../log/targ.log'
-    planner = plan.Planner(actions, log_det_cost, final_cost=True)
+
+    JPDAF_simulator = DAP.JPDAF_simulate(sensor, gate_level=0.99, verbose=True)
+
+    planner = plan.Planner(actions, log_det_cost, JPDAF_simulator, final_cost=True)
     plan_horizon = 10
     n_controls = 5  # number of steps to take before replanning
 
@@ -98,7 +102,7 @@ if __name__ == '__main__':
             #robots[i].tmm.updateBelief(output)
 
 
-        '''
+
         if kk % n_controls == 0:
             for robot in robots:
                 planner_output = planner.planFVI(robot, plan_horizon)
@@ -107,7 +111,6 @@ if __name__ == '__main__':
         for robot in robots:
             print("plan_output length = ", len(planner_output))
             robot.applyControl(planner_output.pop(0), 1)
-        '''
 
         for target in targets:
             target.forwardSimulate(1)

@@ -1,10 +1,11 @@
 from utils import *
 from anytree import Node
 from copy import copy, deepcopy
-from kalmanFilter import KalmanFilterCovAndInnovationCov
+from kalmanFilter import KalmanFilterCovAndInnovationCov, GaussianBelief
 import numpy as np
 from cost_function import *
 import sys
+from sensor import Measurement
 
 """
 class Search_Node:
@@ -17,12 +18,13 @@ class Search_Node:
 """
 
 class SearchNode(Node):
-    def __init__(self, state, robot, cost_func, parent=None, action=None):
+    def __init__(self, state, robot, cost_func, JPDA=None, parent=None, action=None):
         Node.__init__(self, action, parent)
         self.state = state
         self.robot = robot
         self.cost_func = cost_func
         self.action = action
+        self.JPDA_filter = JPDA
 
     def make_children(self, actions):
         for action in actions:
@@ -33,7 +35,8 @@ class SearchNode(Node):
         child = SearchNode(deepcopy(self.state), self.robot, self.cost_func, self, action)
         child.state.move(action)
         child.state.inn_cov = []  # reset inn cov to empty
-        child.state.filter_cov(self.robot, child.depth)
+        #child.state.filter_cov(self.robot, child.depth)
+        child.state.filter_cov_JPDA(self.robot, child.depth, self.JPDA_filter)
         child.state.total_cost = self.state.total_cost + child.state.get_cost(self.cost_func, child.depth)
 
         return child  # caller doesn't actually store it
@@ -53,6 +56,40 @@ class SearchState:
     def move(self, action):
         self.state = propagateOwnshipEuler(self.state, action[0], action[1], self.dt)
 
+    def filter_cov_JPDA(self, robot, depth, JPDA_filter):
+        # first, grab the predicted mean and covariance
+        ownship = self.state   # already computed SearhState.move()
+
+        y_curr = self.targ_state[depth]
+        beliefs = []
+        meas = []
+        for i in range(int(len(self.targ_state)/self.y_dim)): # loop over number of targets
+            y_targ_predict = y_curr[i * self.y_dim:i * self.y_dim + self.y_dim]
+            cov_targ = self.Sigma[i * self.y_dim:i * self.y_dim + self.y_dim, i * self.y_dim:i * self.y_dim + self.y_dim]
+
+            #already have mean_predict, get cov predict
+            A = robot.tmm.targets.values()[0].getJacobian()
+            W = robot.tmm.targets.values()[0].getNoise()
+            cov_targ_predict = A @ cov_targ @ A.transpose() + W
+
+            beliefs.append(GaussianBelief(y_targ_predict, cov_targ_predict))
+            predicted_meas = robot.sensor.observationModel(ownship, y_targ_predict)
+            meas.append(Measurement(predicted_meas, 0, 1))
+
+        #now, with measurements, and predicted beliefs, apply the JPDAF
+        filter_output = JPDA_filter.filter()
+
+        # Take filter output and update state mean and covariance
+        targ_num = 0
+        for i in range(int(len(self.targ_state)/self.y_dim)):
+            start_block = targ_num * self.y_dim
+            end_block = start_block + self.y_dim
+            self.Sigma[start_block:end_block, start_block:end_block] = filter_output[i]._cov
+            #dont need to update mean since we have Y_T
+            targ_num += 1
+
+        return None
+
     def filter_cov(self, robot, depth):
         targ_num = 0
         for target in robot.tmm.targets.values():
@@ -69,7 +106,7 @@ class SearchState:
             self.inn_cov.append(inn_cov_targ)
             targ_num += 1
 
-        return
+        return None
 
     def get_cost(self, cost_func, depth):
 
@@ -117,13 +154,14 @@ class SearchState:
 
 
 class Planner:
-    def __init__(self, actions, cost_function, final_cost=False, dt=1, logfile=None, targ_log=None):
+    def __init__(self, actions, cost_function, JPDAF_sim=None, final_cost=False, dt=1, logfile=None, targ_log=None):
         self.actions = actions
         self.cost_function = cost_function
         self.dt = dt
         self.logfile = logfile
         self.targ_log = targ_log
         self.final_cost = final_cost
+        self.JPDAF_sim = JPDAF_sim      # object that will be passed predicted beliefs and measurements
 
     def planFVI(self, robot, T, debug=False):
 
@@ -136,7 +174,7 @@ class Planner:
 
         S0 = SearchState(x0, Sigma0, y_T, dt=1)
         #S0.cost = 0  # every path starts at this node so cost doesn't matter
-        root = SearchNode(S0, robot, self.cost_function)
+        root = SearchNode(S0, robot, self.cost_function, self.JPDAF_sim)
 
         for i in range(T):
             for leaf in root.leaves:
