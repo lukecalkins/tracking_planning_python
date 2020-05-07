@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from plotting import draw_cov
 
-f = open("plan.log", 'r')
+f = open("plan.json", 'r')
 lines = f.readlines()
 n_Sigma = 8
 n_mat = int(len(lines)/n_Sigma)

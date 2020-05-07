@@ -6,6 +6,7 @@ import numpy as np
 from cost_function import *
 import sys
 from sensor import Measurement
+import json
 
 """
 class Search_Node:
@@ -18,13 +19,13 @@ class Search_Node:
 """
 
 class SearchNode(Node):
-    def __init__(self, state, robot, cost_func, JPDA=None, parent=None, action=None):
+    def __init__(self, state, robot, cost_func, JPDA_sim=None, parent=None, action=None):
         Node.__init__(self, action, parent)
         self.state = state
         self.robot = robot
         self.cost_func = cost_func
         self.action = action
-        self.JPDA_filter = JPDA
+        self.JPDA_sim = JPDA_sim
 
     def make_children(self, actions):
         for action in actions:
@@ -32,11 +33,11 @@ class SearchNode(Node):
                 self._make_child(action)
 
     def _make_child(self, action):
-        child = SearchNode(deepcopy(self.state), self.robot, self.cost_func, self, action)
+        child = SearchNode(deepcopy(self.state), self.robot, self.cost_func, self.JPDA_sim, self, action)
         child.state.move(action)
         child.state.inn_cov = []  # reset inn cov to empty
         #child.state.filter_cov(self.robot, child.depth)
-        child.state.filter_cov_JPDA(self.robot, child.depth, self.JPDA_filter)
+        child.state.filter_cov_JPDA(self.robot, child.depth, self.JPDA_sim)
         child.state.total_cost = self.state.total_cost + child.state.get_cost(self.cost_func, child.depth)
 
         return child  # caller doesn't actually store it
@@ -56,7 +57,7 @@ class SearchState:
     def move(self, action):
         self.state = propagateOwnshipEuler(self.state, action[0], action[1], self.dt)
 
-    def filter_cov_JPDA(self, robot, depth, JPDA_filter):
+    def filter_cov_JPDA(self, robot, depth, JPDA_sim):
         # first, grab the predicted mean and covariance
         ownship = self.state   # already computed SearhState.move()
 
@@ -68,8 +69,8 @@ class SearchState:
             cov_targ = self.Sigma[i * self.y_dim:i * self.y_dim + self.y_dim, i * self.y_dim:i * self.y_dim + self.y_dim]
 
             #already have mean_predict, get cov predict
-            A = robot.tmm.targets.values()[0].getJacobian()
-            W = robot.tmm.targets.values()[0].getNoise()
+            A = list(robot.tmm.targets.values())[0].getJacobian()
+            W = list(robot.tmm.targets.values())[0].getNoise()
             cov_targ_predict = A @ cov_targ @ A.transpose() + W
 
             beliefs.append(GaussianBelief(y_targ_predict, cov_targ_predict))
@@ -77,7 +78,7 @@ class SearchState:
             meas.append(Measurement(predicted_meas, 0, 1))
 
         #now, with measurements, and predicted beliefs, apply the JPDAF
-        filter_output = JPDA_filter.filter()
+        filter_output = JPDA_sim.filter(meas, beliefs, ownship)
 
         # Take filter output and update state mean and covariance
         targ_num = 0
@@ -154,14 +155,14 @@ class SearchState:
 
 
 class Planner:
-    def __init__(self, actions, cost_function, JPDAF_sim=None, final_cost=False, dt=1, logfile=None, targ_log=None):
+    def __init__(self, actions, cost_function, JPDAF_sim=None, final_cost=False, dt=1, log_file=None, log_flag=False):
         self.actions = actions
         self.cost_function = cost_function
         self.dt = dt
-        self.logfile = logfile
-        self.targ_log = targ_log
+        self.log_file = log_file
         self.final_cost = final_cost
         self.JPDAF_sim = JPDAF_sim      # object that will be passed predicted beliefs and measurements
+        self._log_flag = log_flag
 
     def planFVI(self, robot, T, debug=False):
 
@@ -194,9 +195,9 @@ class Planner:
 
         self.get_optimal_path(optimal_node, path_to_node)
 
-        if self.logfile != None:
-            self.log_planner_data(root, path_to_node, self.logfile)
-            self.log_target_state(root, path_to_node, self.targ_log)
+        if self._log_flag:
+            self.log_planner_path(optimal_node)
+
 
         return path_to_node
 
@@ -216,36 +217,25 @@ class Planner:
             path.insert(0, node.action)
             node = node.parent
 
-    def log_target_state(self, root, path, file):
-        curr_node = root
-        t = 0
-        f = open(file, 'a')
+    def log_planner_path(self, node):
+        data = {}
+        data['cov'] = []
+        data['pos'] = []
+        data['ownship'] = []
+        data['node_cost'] = []
+        data['total_cost'] = []
         while True:
-            np.savetxt(f, curr_node.state.targ_state[curr_node.depth])
-            if curr_node.children == ():
+            data['cov'].insert(0, node.state.Sigma.tolist())
+            data['pos'].insert(0, node.state.targ_state[node.depth].tolist())
+            data['ownship'].insert(0, node.state.state.tolist())
+            data['node_cost'].insert(0, node.state.node_cost)
+            data['total_cost'].insert(0, node.state.total_cost)
+            node = node.parent
+            if node == None:
                 break
-            child = [node for node in curr_node.children if node.action == path[t]]
-            t += 1
-            curr_node = child[0]
-        f.close()
 
+        with open(self.log_file, 'w') as outfile:
+            json.dump(data, outfile)
 
-    def log_planner_data(self, root, path, file):
-        """
-        function to log the data over the optimal path a computed planning tree
-        :param root:
-        :param path: list of actions to take from root node
-        :return:
-        """
-        curr_node = root
-        t = 0
-        f = open(self.logfile, 'a')
-        while True:
-            array_list = curr_node.state.Sigma.tolist()
-            np.savetxt(f, curr_node.state.Sigma)
-            if curr_node.children == ():
-                break
-            child = [node for node in curr_node.children if node.action == path[t]]
-            t += 1
-            curr_node = child[0]
-        f.close()
+        return None
+

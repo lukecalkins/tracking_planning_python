@@ -62,7 +62,7 @@ class JPDAF_simulate:
             x_pred = targ_predict_beliefs[i]._mean
 
             mean_update = x_pred + W_k @ weighted_innovation
-            cov_update = P_pred + W_k @ S_k @ W_k.transpose() + P_k
+            cov_update = P_pred - W_k @ S_k @ W_k.transpose() + P_k
             output.append(GaussianBelief(mean_update, cov_update))
 
         return output
@@ -145,6 +145,7 @@ class JPDAF_simulate:
 
         #normalize event probabilities
         event_probs = event_probs/event_probs.sum()
+        #print("number of event = ", len(event_matrices), " event probs sum = ", event_probs.sum())
 
         return event_probs
 
@@ -271,8 +272,16 @@ class JPDAF_simulate:
             print("Desired gating level not found")
 
         gate_volume = 2 * np.sqrt(k_alpha) * np.sqrt(np.linalg.det(inn_cov))
-        print("Gate volume: ", gate_volume * 180/np.pi, " degrees")
 
         return gate_volume
 
 
+class JPDAF_merged:
+
+    def __init__(self, sensor, gate_level=0.99, verbose=False):
+        self.sensor = sensor
+        self._gate_level = gate_level
+        self._verbose = verbose
+        self._inn_cov_list = []   # each iteration, this will be populated with the innovation covariance of each target
+        self._z_predict_list = []
+        self._H_k_list = []

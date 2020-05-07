@@ -32,6 +32,9 @@ class Target:
     def getPosition(self):
         return np.copy(self._state[0:2])
 
+    def getVelocity(self):
+        return np.copy(self._state[2:4])
+
     def getID(self):
         return self._ID
 
@@ -93,9 +96,10 @@ class InfoTarget(Target):
 
 class TargetModel:
 
-    def __init__(self):
+    def __init__(self, map_coord=None):
         self.targets = {}  # todo: make this not a dictionary but a list so you can loop through targets predictably
         self.target_dim = 0
+        self.map_coord = map_coord  # list of minimum and maximum coordinates
 
 
     def addTarget(self, ID, target):
@@ -134,6 +138,19 @@ class TargetModel:
             index += target._y_dim
 
         return result
+
+    def forwardSimulate(self, T=1):
+
+        for key in self.targets.keys():
+            target = self.targets[key]
+            target.forwardSimulate(T)
+
+            #check for outside mapmin
+            if target.getPosition()[0] <= self.map_coord[0][0] or target.getPosition()[1] <= self.map_coord[0][1]:
+                target._state[2:4] = -1 * target._state[2:4]
+            elif target.getPosition()[0] >= self.map_coord[1][0] or target.getPosition()[1] >= self.map_coord[1][1]:
+                target._state[2:4] = -1 * target._state[2:4]
+
 
 ##############################################################
 

@@ -24,19 +24,29 @@ from utils import *
 
 class StatePlotter:
 
-    def __init__(self, mapmin, mapmax, title, plotNum=1, video=False):
+    def __init__(self, mapmin, mapmax, title, plotNum=1, video=False, track_stats_flag=False):
 
-        self.fig = plt.figure(plotNum)
+        self.fig = plt.figure(plotNum, figsize=(10,5))
         self.mapmin = mapmin
         self.mapmax = mapmax
         self.title = title
         self.video = video
-        self.images = []
+        self.images = []  # for video only
+        self.track_stats = track_stats_flag
+        if self.track_stats:
+            self.MSE_list = []
+            self.log_det_Sigma_list = []
         plt.ion()
 
     def draw_env(self):
 
-        self.ax = self.fig.subplots()
+        if self.track_stats:
+            self.ax = self.fig.add_subplot(121)
+            self.ax_MSE = self.fig.add_subplot(222)
+            self.ax_log_det_sig = self.fig.add_subplot(224)
+        else:
+            self.ax = self.fig.subplots()
+
         self.ax.set_xlim(self.mapmin[0], self.mapmax[0])
         self.ax.set_ylim(self.mapmin[1], self.mapmax[1])
         self.ax.set_xlabel('Distance (m)')
@@ -95,6 +105,28 @@ class StatePlotter:
             pos_y.append(pose[1])
         self.ax.plot(pos_x, pos_y, 'k-', zorder=3)
 
+    def draw_mse_lds_curves(self, robots, targets):
+
+        robot = robots[0]
+        Sigma = robot.tmm.getCovarianceMatrix()
+        mean = robot.tmm.getTargetState()
+
+        log_det_Sigma = np.log(np.linalg.det(Sigma))
+        self.log_det_Sigma_list.append(log_det_Sigma)
+
+        true_state = np.array([])
+        for target in targets:
+            true_state = np.append(true_state, target.getState())
+        MSE = np.linalg.norm(mean - true_state)
+        self.MSE_list.append(MSE)
+
+        self.ax_MSE.plot(self.MSE_list, c='b')
+        self.ax_MSE.set_title('MSE')
+        self.ax_log_det_sig.plot(self.log_det_Sigma_list, c='b')
+        self.ax_log_det_sig.set_title('Log(det($\Sigma$))')
+        plt.tight_layout()
+
+
 
     def plot_state(self, robots, targets, planner_output = None, masked = False, robot_size=1, target_size=1):
 
@@ -102,7 +134,7 @@ class StatePlotter:
         self.draw_env()
         if masked == True:
             self.ax.set_title("MASKED!")
-        clr_list = ['r', 'b']
+        clr_list = ['r', 'b', 'g']
 
         for robot in robots:
             pose = robot.getState()
@@ -124,6 +156,9 @@ class StatePlotter:
             self.draw_target(target_state, clr=clr_list[target_ndx], size=target_size)
             target_ndx += 1
 
+        if self.track_stats:
+            self.draw_mse_lds_curves(robots, targets)
+
         plt.draw()
         if self.video:
             self.fig.canvas.draw()
@@ -140,6 +175,58 @@ class StatePlotter:
         """
         kwargs_write = {'fps': fps, 'quantizer': 'nq'}
         imageio.mimsave('../results/videos/' + filename + '.mp4', self.images, fps=fps)
+
+    def save_track_stats(self, filename):
+        np.savez('../results/videos/' + filename, MSE=self.MSE_list, log_det_Sigma=self.log_det_Sigma_list)
+
+
+class TrackStatsPlotter:
+
+    def __init__(self, plot_num=1, video=False):
+
+        self.fig = plt.figure(plot_num)
+        self.MSE_list = []
+        self.log_det_Sigma_list = []
+        self.video = video
+        self.images = []  # for video only
+
+    def clear_plot(self):
+
+        return self.fig.clf()
+
+    def draw_curves(self):
+
+        self.axes = self.fig.subplots(2, 1)
+        self.axes[0].plot(self.MSE_list, c='b')
+        self.axes[0].set_title('MSE')
+        self.axes[1].plot(self.log_det_Sigma_list, c='b')
+        self.axes[1].set_title('Log(det($\Sigma$))')
+        plt.tight_layout()
+
+    def plot_stats(self, Sigma, mean, targets):
+
+        self.clear_plot()
+        log_det_Sigma = np.log(np.linalg.det(Sigma))
+        self.log_det_Sigma_list.append(log_det_Sigma)
+
+        #get ground truth target state
+        true_state = np.array([])
+        for target in targets:
+            true_state = np.append(true_state, target.getState())
+        MSE = np.linalg.norm(mean - true_state)
+        self.MSE_list.append(MSE)
+
+        self.draw_curves()
+
+        if self.video:
+            self.fig.canvas.draw()
+            image = np.frombuffer(self.fig.canvas.tostring_rgb(), dtype='uint8')
+            image = image.reshape(self.fig.canvas.get_width_height()[::-1] + (3,))
+            self.images.append(image)
+
+    def save_video(self, filename, fps=30):
+        imageio.mimsave('../results/videos/' + filename + '.mp4', self.images, fps=fps)
+
 
 
 def draw_cov(mean, cov, confidence, ax, clr='r'):

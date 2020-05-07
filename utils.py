@@ -30,3 +30,18 @@ def gaussian_pdf(x, mean, cov):
     den = ((2*np.pi)**z_dim/2)*(np.sqrt(np.linalg.det(cov)))
     likelihood = num/den
     return likelihood
+
+def draw_cov(ax, mean, cov, confidence, clr='r'):
+    #manual entries for plotter checking
+    #cov = np.array([[225, 0], [0, 225]])
+    #mean = np.array([50, 50])
+
+    s = -2 * np.log(1 - confidence)
+    w, V = np.linalg.eig(s * cov)
+    t = np.linspace(0, 2*np.pi, 100)
+    D = np.array([[np.sqrt(w[0]), 0], [0, np.sqrt(w[1])]])
+
+    Q = np.matmul(V, D)
+    a = np.matmul(Q, np.array([np.cos(t), np.sin(t)]))
+    b = 1
+    ax.plot(a[0, :] + mean[0], a[1, :] + mean[1], clr)
