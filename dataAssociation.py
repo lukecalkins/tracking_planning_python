@@ -329,6 +329,24 @@ class JPDAF:
 ###### end JPDAF #######
 ########################
 
+
+class JPDAF_merged:
+
+    def __init__(self, sensor, gate_level=0.99, verbose=False):
+        self.sensor = sensor
+        self._gate_level = gate_level
+        self._verbose = verbose
+        self._inn_cov_list = []   # each iteration, this will be populated with the innovation covariance of each target
+        self._z_predict_list = []
+        self._H_k_list = []
+
+    def filter(self, measurements, robot, targetIDs, clutter_density):
+
+########################
+###### end JPDAF_merged #######
+########################
+
+
 def add_masked_measurements_2targ(measurements, robot, targetIDs, proximity):
     """
     function that detects if a marking event is occurring among targets being tracked. If so, it adds artificial

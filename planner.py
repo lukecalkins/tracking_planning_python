@@ -36,8 +36,8 @@ class SearchNode(Node):
         child = SearchNode(deepcopy(self.state), self.robot, self.cost_func, self.JPDA_sim, self, action)
         child.state.move(action)
         child.state.inn_cov = []  # reset inn cov to empty
-        #child.state.filter_cov(self.robot, child.depth)
-        child.state.filter_cov_JPDA(self.robot, child.depth, self.JPDA_sim)
+        child.state.filter_cov(self.robot, child.depth)
+        #child.state.filter_cov_JPDA(self.robot, child.depth, self.JPDA_sim)
         child.state.total_cost = self.state.total_cost + child.state.get_cost(self.cost_func, child.depth)
 
         return child  # caller doesn't actually store it
@@ -126,6 +126,11 @@ class SearchState:
 
         elif isinstance(cost_func, DeltaBearingCost):
             cost = cost_func.getCost(self.state, self.targ_state[depth])
+            self.node_cost = cost
+            return cost
+
+        elif isinstance(cost_func, MaxEigCost):
+            cost = cost_func.getCost(self.Sigma)
             self.node_cost = cost
             return cost
 

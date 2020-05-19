@@ -74,6 +74,44 @@ class BearingSensor(Sensor):
 
         return output, masked
 
+    def senseTargets_interference_n(self, own_state, targets, proximity):
+        proximity = np.pi/180 * proximity
+        bearings = []
+        targ_dists = []
+        meas_list = []
+        true_bearings = []
+        for target in targets:
+            dist = np.linalg.norm(target.getPosition() - own_state[0:2])
+            targ_dists.append(dist)
+            measurement = self.sense(own_state, target)
+            meas_list.append(measurement)
+            true_bearings.append(self.observationModel(own_state, target.getPosition()))
+
+        proximity_list = []
+        for i in range(len(targets)):
+            targ_proximity  = []
+            for j in range(len(targets)):
+                if np.abs(true_bearings[i] - true_bearings[j]) < proximity:
+                    if j != i:
+                        targ_proximity.append(j)
+            proximity_list.append(targ_proximity)
+
+        masked_indicator = np.zeros(len(targets))
+        for i in range(len(proximity_list)):
+            for j in range(len(proximity_list[i])):
+                targ_to_check = proximity_list[i][j]
+                if targ_dists[i] > targ_dists[targ_to_check]:
+                    masked_indicator[i] = 1
+
+        #loop over indicators and only add to output if not masked
+        output = []
+        for i in range(len(masked_indicator)):
+            if masked_indicator[i] != 1:
+                output.append(meas_list[i])
+
+        num_targs_seen = len(targets) - masked_indicator.sum()
+        return output, int(num_targs_seen)
+
     def sense(self, x, target):
         y = target.getPosition()
         z = restrict_angle(np.arctan2(y[1] - x[1], y[0] - x[0]) - x[2])

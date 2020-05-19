@@ -276,7 +276,7 @@ class JPDAF_simulate:
         return gate_volume
 
 
-class JPDAF_merged:
+class JPDAF_merged_simulate:
 
     def __init__(self, sensor, gate_level=0.99, verbose=False):
         self.sensor = sensor

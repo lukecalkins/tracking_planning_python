@@ -17,6 +17,17 @@ class LogDetCost(CostFunction):
         #print("Log det Sigma = ", cost)
         return cost
 
+class MaxEigCost(CostFunction):
+
+    def __init__(self, y_dim):
+        CostFunction.__init__(self)
+        self.y_dim = y_dim
+
+    def getCost(self, Sigma):
+        w, v = np.linalg.eig(Sigma)
+        cost = w.max()
+        return cost
+
 class DeltaBearingCost(CostFunction):
 
     def __init__(self, y_dim):

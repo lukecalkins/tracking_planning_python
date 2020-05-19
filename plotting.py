@@ -128,13 +128,13 @@ class StatePlotter:
 
 
 
-    def plot_state(self, robots, targets, planner_output = None, masked = False, robot_size=1, target_size=1):
+    def plot_state(self, robots, targets, planner_output = None, num_targs_seen = None, masked = False, robot_size=1, target_size=1):
 
         self.clear_plot()
         self.draw_env()
         if masked == True:
             self.ax.set_title("MASKED!")
-        clr_list = ['r', 'b', 'g']
+        clr_list = ['r', 'b', 'g', 'm']
 
         for robot in robots:
             pose = robot.getState()
