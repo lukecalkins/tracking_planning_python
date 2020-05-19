@@ -127,7 +127,7 @@ if __name__ == '__main__':
             #measurements, masked = robots[i].sensor.senseTargets_interference_2(robots[i].getState(), targets, proximity)
             #DA.add_masked_measurements_2targ(measurements, robot, target_ID, proximity)
             add_clutter(measurements, clutter_density)
-            JPDA.filter(measurements, robot, target_ID, clutter_density)
+            JPDA.filter(measurements, robot, clutter_density)
             #output = KF.MultiTargetFilter(measurements, robots[i], debug=False)
             #robots[i].tmm.updateBelief(output)
 

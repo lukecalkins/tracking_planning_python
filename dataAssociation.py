@@ -10,43 +10,41 @@ class JPDAF:
         self._gate_level = gate_level
         self._verbose = verbose
 
-    def filter(self, measurements, robot, targetIDs, clutter_density):
+    def filter(self, measurements, robot, clutter_density):
         """
         Interfacing function that calls applies the JPDAF filter given target estimates and a set of measurements
         :param measurements: list of measurements (raw, does not use associated target ID)
         :param robot: robot with targets estimates in its robot.tmm field
-        :param targetIDs: list of target IDs to loop through
         :param clutter_density:
         :return:
         """
 
-        Omega = self.gate_measurements(measurements, robot, targetIDs, self._gate_level)
+        Omega = self.gate_measurements(measurements, robot, self._gate_level)
         if self._verbose:
             print("Omega: ", Omega, "\n")
 
         event_matrices = self.generate_association_events(Omega)
-        event_probabilities = self.get_event_probabilities(event_matrices, measurements, robot, targetIDs,
-                                                           clutter_density)
+        event_probabilities = self.get_event_probabilities(event_matrices, measurements, robot, clutter_density)
+
         #calculate association probabilites
         association_probability_matrix = np.zeros((Omega.shape[0] + 1, Omega.shape[1] - 1))
         self.get_association_probabilities(association_probability_matrix, event_matrices, event_probabilities)
 
         #with association probabilities, the weighted innovation and innovation covariance for each target can be calculated
-        self.update_estimates(association_probability_matrix, measurements, robot, targetIDs)
+        self.update_estimates(association_probability_matrix, measurements, robot)
 
-    def update_estimates(self, prob_mat, measurements, robot, targetIDs):
+    def update_estimates(self, prob_mat, measurements, robot):
         """
         function that obtains the weighted innovation and weighted covariance matrix and updates the respective targets
         mean and covariances through the EKF
         :param prob_mat: association prob matrix with num_rows=num_measurements + 1 (not detected), num_cols = num_targets
         :param robot: robot object
-        :param targetIDs: list of target IDs to iterate over
         :return:
         """
 
         #loop over targets, calculate weighted innovation and weighted inovtaion covariance
-        for i in range(len(targetIDs)):
-            info_target = robot.tmm.getTargetByID(targetIDs[i])
+        for i in range(len(robot.tmm.targets)):
+            info_target = robot.tmm.targets[i]
             weighted_innovation = self.get_weighted_innovation(prob_mat[:, i], measurements, info_target)
             P_k = self.get_P_k(prob_mat[:, i], measurements, info_target, weighted_innovation)
             beta_0 = prob_mat[-1, i]
@@ -122,7 +120,7 @@ class JPDAF:
 
         return None
 
-    def get_event_probabilities(self, event_matrices, measurements, robot, targetIDs, density):
+    def get_event_probabilities(self, event_matrices, measurements, robot, density):
         """
         function that will loop through each event matrix and calculate its corresponding posterior
         probability of occurence.
@@ -141,7 +139,7 @@ class JPDAF:
             for i in range(event.shape[0]):
                 if event[i, 1:].sum() != 0:
                     # measurement associated to that target
-                    likelihood = self.get_measurement_likelihood(event[i, :], measurements[i], robot, targetIDs)
+                    likelihood = self.get_measurement_likelihood(event[i, :], measurements[i], robot)
                     event_prob = event_prob * likelihood
 
             #find detected/undetected targets and multiply by detection probabilities (or 1 - detection probability)
@@ -167,19 +165,18 @@ class JPDAF:
 
         return event_probs
 
-    def get_measurement_likelihood(self, event_row, measurement, robot, targetIDs):
+    def get_measurement_likelihood(self, event_row, measurement, robot):
         """
         functiont that calculates the likelihood of a measuerment given that it is associated to a particulat target
         :param event_row: the row of the even matrix corresponding to the measurement associated
         :param measurement: measurement object associated to the target
         :param robot: robot in which the JPDA filter is running
-        :param targetIDs: sequential list of target IDs to look up the correct target
         :return: value of gaussian likelihood function
         """
 
         #find the correct target
         target_ndx = np.argmax(event_row) - 1  # -1 because first column represents false alarms
-        info_target = robot.tmm.getTargetByID(targetIDs[target_ndx])
+        info_target = robot.tmm.targets[target_ndx]
 
         #this info target already has a predicted mean and innovation covariance stored from gating measurements
         innovation = measurement.getZ() - info_target.z_predict
@@ -198,7 +195,7 @@ class JPDAF:
 
         return pdf_val
 
-    def gate_measurements(self, measurements, robot, targetIDs, level=0.99):
+    def gate_measurements(self, measurements, robot, level=0.99):
         """
         Function that creates the fully populated gated matrix encoding all possible data association events based on
         the one dimensional bearing measurement with linearized  measurement model.
@@ -214,8 +211,8 @@ class JPDAF:
         num_targets = robot.tmm.num_targets()
         y_dim = int(robot.tmm.target_dim / num_targets)
         z_dim = robot.sensor.z_dim
-        for i in range(len(targetIDs)):
-            info_target = robot.tmm.targets[targetIDs[i]]
+        for info_target in robot.tmm.targets:
+            #info_target = robot.tmm.targets[targetIDs[i]]
             info_target.predictMeanAndCovariance(1)
             H = np.zeros((z_dim, y_dim))
             V = np.zeros((z_dim, z_dim))
@@ -235,7 +232,7 @@ class JPDAF:
         for i in range(num_targets):
             #gate target
             for j in range(n_rows):
-                Omega[j, i + 1] = self.gateMeasurementToTarget(robot.tmm.getTargetByID(targetIDs[i]), measurements[j],
+                Omega[j, i + 1] = self.gateMeasurementToTarget(robot.tmm.targets[i], measurements[j],
                                                                level)
         return Omega
 
@@ -340,20 +337,21 @@ class JPDAF_merged:
         self._z_predict_list = []
         self._H_k_list = []
 
-    def filter(self, measurements, robot, targetIDs, clutter_density):
+    def filter(self, measurements, robot, clutter_density):
+
+        return 0
 
 ########################
 ###### end JPDAF_merged #######
 ########################
 
 
-def add_masked_measurements_2targ(measurements, robot, targetIDs, proximity):
+def add_masked_measurements_2targ(measurements, robot, proximity):
     """
     function that detects if a marking event is occurring among targets being tracked. If so, it adds artificial
     measurements to the existing measurements set that have already been generated and passed to the function
     :param measurements:
     :param robot:
-    :param targetIDs:
     :param proximity: proximity in degrees of a masking event
     :return:
     """
@@ -361,8 +359,8 @@ def add_masked_measurements_2targ(measurements, robot, targetIDs, proximity):
     target_dist = []
     target_bearing = []
     own_state = robot.getState()
-    for i in range(len(targetIDs)):
-        info_target = robot.tmm.getTargetByID(targetIDs[i])
+    for i in range(len(robot.tmm.targets)):
+        info_target = robot.tmm.targets[i]
         dist = np.linalg.norm(info_target.getPosition() - own_state[0:2])
         target_dist.append(dist)
         mean_predict = info_target._A @ info_target._state

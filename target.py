@@ -97,13 +97,15 @@ class InfoTarget(Target):
 class TargetModel:
 
     def __init__(self, map_coord=None):
-        self.targets = {}  # todo: make this not a dictionary but a list so you can loop through targets predictably
+        self.targets = []  # todo: make this not a dictionary but a list so you can loop through targets predictably
+        self.targetIDs = []
         self.target_dim = 0
         self.map_coord = map_coord  # list of minimum and maximum coordinates
 
 
     def addTarget(self, ID, target):
-        self.targets[ID] = target
+        self.targets.append(target)
+        self.targetIDs.append(ID)
         self.target_dim += target._y_dim
 
 
@@ -111,8 +113,8 @@ class TargetModel:
 
         result = np.array([])
         index = 0
-        for key in self.targets.keys():
-            result = np.append(result, self.targets[key].getState())
+        for target in self.targets:
+            result = np.append(result, target.getState())
 
         return result
 
@@ -122,8 +124,7 @@ class TargetModel:
     def getSystemMatrix(self):
         result = np.zeros((self.target_dim, self.target_dim))
         index = 0
-        for key in self.targets.keys():
-            target = self.targets[key]
+        for target in self.targets:
             result[index:index + target._y_dim, index:index + target._y_dim] = target.getJacobian()
             index += target._y_dim
 
@@ -132,8 +133,7 @@ class TargetModel:
     def getNoiseMatrix(self):
         result = np.zeros((self.target_dim, self.target_dim))
         index = 0
-        for key in self.targets.keys():
-            target = self.targets[key]
+        for target in self.targets:
             result[index:index + target._y_dim, index:index + target._y_dim] = target.getNoise()
             index += target._y_dim
 
@@ -141,8 +141,7 @@ class TargetModel:
 
     def forwardSimulate(self, T=1):
 
-        for key in self.targets.keys():
-            target = self.targets[key]
+        for target in self.targets:
             target.forwardSimulate(T)
 
             #check for outside mapmin
@@ -160,15 +159,15 @@ class InfoTargetModel(TargetModel):
         TargetModel.__init__(self)
 
     def addTarget(self, ID, infoTarget):
-        self.targets[ID] = infoTarget
+        self.targets.append(infoTarget)
+        self.targetIDs.append(ID)
         self.target_dim += infoTarget._y_dim
 
     def getCovarianceMatrix(self):
 
         result = np.zeros((self.target_dim, self.target_dim))
         index = 0
-        for key in self.targets.keys():
-            target = self.targets[key]
+        for target in self.targets:
             result[index:index + target._y_dim, index:index + target._y_dim] = target.getCovariance()
             index += target._y_dim
 
@@ -190,8 +189,7 @@ class InfoTargetModel(TargetModel):
     def updateBelief(self, belief):
 
         index = 0
-        for key in self.targets.keys():
-            target = self.targets[key]
+        for target in self.targets:
             targ_mean = belief._mean[index:index + target._y_dim]
             targ_cov = belief._cov[index:index + target._y_dim, index:index + target._y_dim]
             target.updateBelief(targ_mean, targ_cov)

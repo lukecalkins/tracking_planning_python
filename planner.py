@@ -69,8 +69,8 @@ class SearchState:
             cov_targ = self.Sigma[i * self.y_dim:i * self.y_dim + self.y_dim, i * self.y_dim:i * self.y_dim + self.y_dim]
 
             #already have mean_predict, get cov predict
-            A = list(robot.tmm.targets.values())[0].getJacobian()
-            W = list(robot.tmm.targets.values())[0].getNoise()
+            A = robot.tmm.targets[i].getJacobian()
+            W = robot.tmm.targets[i].getNoise()
             cov_targ_predict = A @ cov_targ @ A.transpose() + W
 
             beliefs.append(GaussianBelief(y_targ_predict, cov_targ_predict))
@@ -93,7 +93,7 @@ class SearchState:
 
     def filter_cov(self, robot, depth):
         targ_num = 0
-        for target in robot.tmm.targets.values():
+        for target in robot.tmm.targets:
             start_block = targ_num * self.y_dim
             end_block = start_block + self.y_dim
             A = target.getJacobian()

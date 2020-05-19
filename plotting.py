@@ -143,8 +143,7 @@ class StatePlotter:
                 self.draw_planned_path(pose, planner_output)
 
             info_ndx = 0
-            for ID in robot.tmm.targets:
-                target = robot.tmm.getTargetByID(ID)
+            for target in robot.tmm.targets:
                 mean = target.getState()[:2]
                 cov = target.getCovariance()[:2, :2]
                 self.draw_cov(mean, cov, confidence=0.99, clr=clr_list[info_ndx])
