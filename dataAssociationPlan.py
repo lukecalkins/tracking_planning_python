@@ -285,3 +285,21 @@ class JPDAF_merged_simulate:
         self._inn_cov_list = []   # each iteration, this will be populated with the innovation covariance of each target
         self._z_predict_list = []
         self._H_k_list = []
+
+    def filter(self, measurements, robot, ownship):
+        """
+        fully external functioning JPDAF filter without clutter and with perfect detections
+        :param measurements: measurement list
+        :param ownship: own_ship state
+        :param a targ_predict_beliefs: list of target beliefs (mean, cov) from previous predcited from prevous time step
+        :return: a
+        """
+        # reset inn_cov_list, z predict List and H_k list to be empty. Will be populated with innovation covariance
+        # for each target
+        self._inn_cov_list = []
+        self._z_predict_list = []
+        self._H_k_list = []
+
+        Omega = self.gate_measurements(measurements, robot, self._gate_level)
+        if self._verbose:
+            print("JPDAF_merged, Omega matrix: ", Omega)

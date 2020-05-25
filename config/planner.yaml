@@ -1,0 +1,20 @@
+---
+# Planner configuration for forward value iteration
+#cost: log_det
+cost: max_eig
+#cost: gate_cost
+#cost: delta_bearing
+final_cost: True
+
+# action parameters
+speed: 20.0
+turn_radius: 50.0
+
+# filter type in
+#filter_type: kalman
+filter_type: JPDAF
+
+log_file: log/plan.json
+log_flag: False
+verbose: False
+

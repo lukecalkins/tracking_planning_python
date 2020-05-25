@@ -27,17 +27,31 @@ class SearchNode(Node):
         self.action = action
         self.JPDA_sim = JPDA_sim
 
-    def make_children(self, actions):
+    def make_children(self, actions, filter_type):
         for action in actions:
             if not any(child.name == action for child in self.children):
-                self._make_child(action)
+                if filter_type == 'kalman':
+                    self._make_child_kalman(action)
+                elif filter_type == 'JPDAF':
+                    self._make_child_JPDAF(action)
+                else:
+                    print("filter type not recognized in SearchNode.make_children")
+                    exit()
 
-    def _make_child(self, action):
+    def _make_child_kalman(self, action):
         child = SearchNode(deepcopy(self.state), self.robot, self.cost_func, self.JPDA_sim, self, action)
         child.state.move(action)
         child.state.inn_cov = []  # reset inn cov to empty
         child.state.filter_cov(self.robot, child.depth)
-        #child.state.filter_cov_JPDA(self.robot, child.depth, self.JPDA_sim)
+        child.state.total_cost = self.state.total_cost + child.state.get_cost(self.cost_func, child.depth)
+
+        return child  # caller doesn't actually store it
+
+    def _make_child_JPDAF(self, action):
+        child = SearchNode(deepcopy(self.state), self.robot, self.cost_func, self.JPDA_sim, self, action)
+        child.state.move(action)
+        child.state.inn_cov = []  # reset inn cov to empty
+        child.state.filter_cov_JPDA(self.robot, child.depth, self.JPDA_sim)
         child.state.total_cost = self.state.total_cost + child.state.get_cost(self.cost_func, child.depth)
 
         return child  # caller doesn't actually store it
@@ -160,9 +174,10 @@ class SearchState:
 
 
 class Planner:
-    def __init__(self, actions, cost_function, JPDAF_sim=None, final_cost=False, dt=1, log_file=None, log_flag=False):
+    def __init__(self, actions, cost_function, filter_type, JPDAF_sim=None, final_cost=False, dt=1, log_file=None, log_flag=False):
         self.actions = actions
         self.cost_function = cost_function
+        self.filter = filter_type
         self.dt = dt
         self.log_file = log_file
         self.final_cost = final_cost
@@ -184,7 +199,9 @@ class Planner:
 
         for i in range(T):
             for leaf in root.leaves:
-                leaf.make_children(self.actions)
+                leaf.make_children(self.actions, self.filter)
+
+
         print("Planner finished")
 
         #get output path from final node cost

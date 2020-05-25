@@ -173,10 +173,10 @@ class StatePlotter:
         :return:
         """
         kwargs_write = {'fps': fps, 'quantizer': 'nq'}
-        imageio.mimsave('../results/videos/' + filename + '.mp4', self.images, fps=fps)
+        imageio.mimsave('results/videos/' + filename + '.mp4', self.images, fps=fps)
 
     def save_track_stats(self, filename):
-        np.savez('../results/videos/' + filename, MSE=self.MSE_list, log_det_Sigma=self.log_det_Sigma_list)
+        np.savez('results/videos/' + filename, MSE=self.MSE_list, log_det_Sigma=self.log_det_Sigma_list)
 
 
 class TrackStatsPlotter:
@@ -224,7 +224,7 @@ class TrackStatsPlotter:
             self.images.append(image)
 
     def save_video(self, filename, fps=30):
-        imageio.mimsave('../results/videos/' + filename + '.mp4', self.images, fps=fps)
+        imageio.mimsave('results/videos/' + filename + '.mp4', self.images, fps=fps)
 
 
 

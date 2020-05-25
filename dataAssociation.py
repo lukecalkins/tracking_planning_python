@@ -2,15 +2,17 @@ import itertools as IT
 import numpy as np
 from utils import restrict_angle
 from sensor import Measurement
+from kalmanFilter import GaussianBelief
 
 class JPDAF:
 
-    def __init__(self, detection_prob, gate_level=0.99, verbose = False):
+    def __init__(self, detection_prob, clutter_density, gate_level=0.99, verbose = False):
         self._detection_prob = detection_prob
         self._gate_level = gate_level
         self._verbose = verbose
+        self._clutter_density = clutter_density
 
-    def filter(self, measurements, robot, clutter_density):
+    def filter(self, measurements, robot):
         """
         Interfacing function that calls applies the JPDAF filter given target estimates and a set of measurements
         :param measurements: list of measurements (raw, does not use associated target ID)
@@ -24,7 +26,7 @@ class JPDAF:
             print("Omega: ", Omega, "\n")
 
         event_matrices = self.generate_association_events(Omega)
-        event_probabilities = self.get_event_probabilities(event_matrices, measurements, robot, clutter_density)
+        event_probabilities = self.get_event_probabilities(event_matrices, measurements, robot, self._clutter_density)
 
         #calculate association probabilites
         association_probability_matrix = np.zeros((Omega.shape[0] + 1, Omega.shape[1] - 1))
@@ -337,9 +339,79 @@ class JPDAF_merged:
         self._z_predict_list = []
         self._H_k_list = []
 
-    def filter(self, measurements, robot, clutter_density):
+    def filter(self, measurements, robot):
+        """
+        fully external functioning JPDAF filter without clutter and with perfect detections
+        :param measurements: measurement list
+        :param ownship: own_ship state
+        :param a targ_predict_beliefs: list of target beliefs (mean, cov) from previous predcited from prevous time step
+        :return: a
+        """
+        # reset inn_cov_list, z predict List and H_k list to be empty. Will be populated with innovation covariance
+        # for each target
+        self._inn_cov_list = []
+        self._z_predict_list = []
+        self._H_k_list = []
 
-        return 0
+        beliefs = self.get_predicted_beliefs(robot)
+
+    def get_predicted_beliefs(self, robot):
+        """
+        function that will take targets from the robot target model and generate predicted mean and covariance for the
+        currnet time step
+        :param robot: robot object
+        :return: list of Gaussian beliefs (mean and cov)
+        """
+
+        beliefs = []
+        for i in range(len(robot.tmm.targets)):
+            target = robot.tmm.targets[i]
+            y_targ_belief = target.getState()
+            cov_targ_belief = target.getCovariance()
+            A = target.getJacobian()
+            W =  target.getNoise()
+            y_targ_predict = A @ y_targ_belief
+            cov_targ_predict = A @ cov_targ_belief @ A.transpose() + W
+            predicted_belief = GaussianBelief(y_targ_predict, cov_targ_predict)
+            beliefs.append(predicted_belief)
+
+        return beliefs
+
+    def gate_measurements(self, measurements, targ_predict_beliefs, ownship):
+        """
+        create omega gating matrix only with targets and no clutter
+        :param measurements:
+        :param targ_predict_beliefs:
+        :param own_ship:
+        :return:
+        """
+        num_targs = len(targ_predict_beliefs)
+        num_meas = len(measurements)
+        y_dim = targ_predict_beliefs[0]._mean.shape[0]
+        z_dim = measurements[0].get_z_dim()
+
+        Omega = np.zeros((num_meas, num_targs))
+
+        for i in range(num_targs):
+            z_predict = self.sensor.observationModel(ownship, targ_predict_beliefs[i]._mean)
+            H = np.zeros((z_dim, y_dim))
+            V = np.zeros((z_dim, z_dim))
+            self.sensor.getJacobian(H, V, ownship, targ_predict_beliefs[i]._mean)
+            inn_cov = H @ targ_predict_beliefs[i]._cov @ H.transpose() + V
+            gate_volume = self.get_gate_volume(inn_cov)
+
+            self._inn_cov_list.append(inn_cov)   # to be utilized later when calculating probabilities later
+            self._z_predict_list.append(np.array([z_predict]))           # both passed in as 2d array for matrix multiplication
+            self._H_k_list.append(H)
+
+            if self._verbose:
+                print("target ", i, ", gate_volume: ", gate_volume*180/np.pi, " degrees")
+
+            for j in range(num_meas):
+                #columns represent targets, rows represent measurements
+                Omega[j, i] = self.gate_measurement_to_target(gate_volume, z_predict, measurements[j])
+
+        return Omega
 
 ########################
 ###### end JPDAF_merged #######

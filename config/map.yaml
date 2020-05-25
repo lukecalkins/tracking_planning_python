@@ -1,0 +1,4 @@
+---
+# Empty square map
+mapmin: [-1000, -1000]
+maxmax: [1000, 1000]

@@ -39,10 +39,10 @@ class Target:
         return self._ID
 
     def getJacobian(self):
-        return self._A
+        return np.copy(self._A)
 
     def getNoise(self):
-        return self._W
+        return np.copy(self._W)
 
 ##############################################################
 
@@ -53,7 +53,7 @@ class InfoTarget(Target):
         self.covariance = self.constructNoise(cov_pos_init, cov_vel_init)
 
     def getCovariance(self):
-        return self.covariance
+        return np.copy(self.covariance)
 
     def predictState(self, steps):
         current = np.copy(self._state)
@@ -97,7 +97,7 @@ class InfoTarget(Target):
 class TargetModel:
 
     def __init__(self, map_coord=None):
-        self.targets = []  # todo: make this not a dictionary but a list so you can loop through targets predictably
+        self.targets = []
         self.targetIDs = []
         self.target_dim = 0
         self.map_coord = map_coord  # list of minimum and maximum coordinates
@@ -108,6 +108,8 @@ class TargetModel:
         self.targetIDs.append(ID)
         self.target_dim += target._y_dim
 
+    def getTargets(self):
+        return self.targets
 
     def getTargetState(self):
 
