@@ -5,6 +5,14 @@ class GaussianBelief:
         self._mean = mean
         self._cov = cov
 
+    def getMean(self):
+        return self._mean.copy()
+
+    def getCovariance(self):
+        return self._cov.copy()
+
+
+
 def KalmanFilter(mean_prior, cov_prior, A, W, H, V, innovation, debug = 0):
 
     mean_predict = np.matmul(A, mean_prior)

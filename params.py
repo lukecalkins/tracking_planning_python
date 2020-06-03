@@ -19,6 +19,7 @@ class Parameters:
             with open(sensor_config, 'r') as sense_file:
                 sense_node = yaml.load(sense_file, Loader=yaml.FullLoader)
                 self.detection_prob = sense_node['detection_prob']
+                self.unresolved_resolution = sense_node['unresolved_resolution']
             with open(target_config, 'r') as targ_file:
                 targ_node = yaml.load(targ_file, Loader=yaml.FullLoader)
                 self.y_dim = targ_node['targ_dim']

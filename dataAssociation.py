@@ -3,6 +3,8 @@ import numpy as np
 from utils import restrict_angle
 from sensor import Measurement
 from kalmanFilter import GaussianBelief
+from copy import copy
+from collections import deque
 
 class JPDAF:
 
@@ -329,15 +331,18 @@ class JPDAF:
 ########################
 
 
-class JPDAF_merged:
+class JPDAFMerged:
 
-    def __init__(self, sensor, gate_level=0.99, verbose=False):
+    def __init__(self, sensor, unresolved_resolution, clutter_density, gate_level=0.99, verbose=False):
         self.sensor = sensor
+        self.bearing_res = unresolved_resolution
+        self._clutter_density = clutter_density
         self._gate_level = gate_level
         self._verbose = verbose
         self._inn_cov_list = []   # each iteration, this will be populated with the innovation covariance of each target
         self._z_predict_list = []
         self._H_k_list = []
+
 
     def filter(self, measurements, robot):
         """
@@ -353,12 +358,99 @@ class JPDAF_merged:
         self._z_predict_list = []
         self._H_k_list = []
 
+        own_state = robot.getState()
         beliefs = self.get_predicted_beliefs(robot)
+
+        resolution_matrix = self.get_resolution_matrix(beliefs, own_state)
+        graphs = self.get_feasible_graphs(robot, beliefs)
+
+        # Create all data association hypotheses for each
+        hypotheses = self.get_graph_data_association_hypotheses(measurements, graphs, beliefs)
+
+        return 0
+
+    def get_graph_data_association_hypotheses(self, measurements, graphs, beliefs):
+        """
+        function that takes the measurements and all feasible graphs from the target predictions and creates a list of
+        objects where each item is a graph and possible data association for the graph.
+        :param measurements:
+        :param graphs:
+        :return:
+        """
+        for i in range(len(graphs)):
+            self.get_data_associations_for_graph(measurements, graphs[i], beliefs)
+
+        return 0
+
+    def get_data_associations_for_graph(self, measurements, graph, beliefs):
+        """
+        function that takes a graph and set of measurements and creates all possible data assoications, either to a
+        single target or a group of targets, or two clutter. Data association vector represented by vec
+        :param measurements:
+        :param graph:
+        :return:
+        """
+        # Create size of association matrix
+        n_targs = len(beliefs)
+        m_meas = len(measurements)
+        Omega = np.zeros(m_meas, n_targs)
+
+        return 0
+
+    def get_feasible_graphs(self, robot, beliefs):
+        """
+        Function to take the target beliefs and produce all feasible graphs for resolution event. In Bearing only case
+        there is only one feasible graph per resolution event
+        :param beliefs: target beliefs
+        :return: list of graphs. Each graph will contain list of target indices that are grouped in one list (unresolved)
+        or by itself in
+        """
+        bearings = get_bearings(robot, beliefs)
+        bearings_2pi = bearings + np.pi
+        sorted_index = sorted(range(len(bearings_2pi)), key=lambda k: bearings_2pi[k])
+        rotated = deque(sorted_index)
+        n_targs = len(beliefs)
+        graphs = []
+        for i in range(1, n_targs): # i represents number of connections to make (will add fully resolved targets at end
+            for j in range(n_targs):  # j represent index to start at
+                graph = np.zeros((n_targs, n_targs))
+                connections = 0
+                for k in range(1, n_targs): # k iterating over all targets, either connecting it or making it solo
+                    if connections != i:  #made the right number of corrections
+                        graph[rotated[k-1], rotated[k]] = 1
+                        connections += 1
+                rotated.rotate(1)
+                graph = graph + graph.transpose()
+                graphs.append(graph)
+
+        # add fully resolved case
+        graph = np.zeros((n_targs, n_targs))
+        graphs.insert(0, graph)
+
+        return graphs
+
+    def get_resolution_matrix(self, beliefs, own_state):
+        """
+        calculated the pairwise resolution probabilities between each target
+        :param beliefs:
+        :return:
+        """
+
+        n_targs = len(beliefs)
+        P_u = np.zeros((n_targs, n_targs))
+        for i in range(n_targs):
+            P_u[i, i] = 1
+            for j in range(i + 1, n_targs):
+                P_u[i, j] = get_unresolved_prob_bearing(beliefs[i], beliefs[j], self.bearing_res, self.sensor,
+                                                        own_state)
+                P_u[j, i] = P_u[i, j]
+
+        return P_u
 
     def get_predicted_beliefs(self, robot):
         """
         function that will take targets from the robot target model and generate predicted mean and covariance for the
-        currnet time step
+        current time step
         :param robot: robot object
         :return: list of Gaussian beliefs (mean and cov)
         """
@@ -417,6 +509,46 @@ class JPDAF_merged:
 ###### end JPDAF_merged #######
 ########################
 
+class GraphDataAssociation:
+
+    def __init__(self, adjacency, Omega):
+        self.adjacency = adjacency
+        self.Omega = Omega
+
+
+def get_bearings(robot, beliefs):
+    """
+    takes target beliefs and returns list of bearings to each target belief state
+    :param ownship:
+    :param beliefs:
+    :return:
+    """
+    bearings = []
+    own_state = robot.getState()
+    for i in range(len(beliefs)):
+        bearing = robot.sensor.observationModel(own_state, beliefs[i].getMean())
+        bearings.append(bearing)
+
+    return np.array(bearings)
+
+def get_unresolved_prob_bearing(b0, b1, bearing_res, sensor, own_state):
+    """
+    calculates the probability that two targets are unresolved in bearing
+    :param b0: belief for target 0 (mean and cov)
+    :param b1: belief for target 1
+    :param bearing_res: variance parameters of guassian like resolution probability function
+    :param sensor: bearing sensor object
+    :return:
+    """
+
+    bearing0 = sensor.observationModel(own_state, b0.getMean())
+    bearing1 = sensor.observationModel(own_state, b1.getMean())
+    delta_bearing = restrict_angle(bearing0 - bearing1)
+
+    res_cov = 1./(np.sqrt((2*np.log(2))))*bearing_res ** 2
+    prob_unresolved = np.exp(-delta_bearing * 1./res_cov * delta_bearing)
+
+    return prob_unresolved
 
 def add_masked_measurements_2targ(measurements, robot, proximity):
     """
