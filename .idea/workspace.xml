@@ -2,14 +2,9 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="fb424a8f-8274-42c6-b1b1-0f8866416876" name="Default Changelist" comment="">
+      <change afterPath="$PROJECT_DIR$/test/networkX_test.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/config/sensors/bearing.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/config/sensors/bearing.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/config/targetModel.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/config/targetModel.yaml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/dataAssociation.py" beforeDir="false" afterPath="$PROJECT_DIR$/dataAssociation.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/kalmanFilter.py" beforeDir="false" afterPath="$PROJECT_DIR$/kalmanFilter.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/params.py" beforeDir="false" afterPath="$PROJECT_DIR$/params.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/testRobot.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/run_sim.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/test_data_association_merged.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/test_data_association_merged.py" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -52,7 +47,7 @@
       </list>
     </option>
   </component>
-  <component name="RunManager" selected="Python.test_data_association_merged">
+  <component name="RunManager" selected="Python.test_networkx">
     <configuration name="json_test" type="PythonConfigurationType" factoryName="Python">
       <module name="filtering" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -263,6 +258,27 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
+    <configuration name="test_networkx" type="PythonConfigurationType" factoryName="Python">
+      <module name="filtering" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="$PROJECT_DIR$/env/bin/python3" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/test" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test/networkX_test.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
     <configuration name="test_planner" type="PythonConfigurationType" factoryName="Python">
       <module name="filtering" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -310,6 +326,7 @@
       <item itemvalue="Python.test_data_assoction_plan" />
       <item itemvalue="Python.run_sim" />
       <item itemvalue="Python.test_data_association_merged" />
+      <item itemvalue="Python.test_networkx" />
       <item itemvalue="Python.test_config_files" />
       <item itemvalue="Python.run_sim_old" />
       <item itemvalue="Python.test_yaml" />
@@ -436,13 +453,18 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/dataAssociation.py</url>
-          <line>367</line>
-          <option name="timeStamp" value="119" />
+          <line>380</line>
+          <option name="timeStamp" value="124" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/dataAssociation.py</url>
-          <line>407</line>
-          <option name="timeStamp" value="120" />
+          <line>455</line>
+          <option name="timeStamp" value="125" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/test/networkX_test.py</url>
+          <line>24</line>
+          <option name="timeStamp" value="126" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>

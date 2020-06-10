@@ -393,9 +393,57 @@ class JPDAFMerged:
         # Create size of association matrix
         n_targs = len(beliefs)
         m_meas = len(measurements)
-        Omega = np.zeros(m_meas, n_targs)
+        Omega = np.zeros((m_meas, n_targs))
 
+        meas_range = list(range(n_targs + 1))
+        rows_list = m_meas * [meas_range]  # every measurment could come from every target, or clutter
+        all_events = list(IT.product(*rows_list))
+        valid_events = self.get_valid_events(all_events,  n_targs, graph)
         return 0
+
+    def get_valid_events(self, events, n_targs, graph):
+        """
+        takes a list of events where each event is a list of length equal to the number of measurements and entries
+        indicating the column index (0 for clutter, > 0 for target) where the measurement could have come from and
+        returns the set of events that are feasible according to the rules DETERMINED BY THE SPECIFIC GRAPH
+        :param events:
+        :param n_targs:
+        :param graph:
+        :return:
+        """
+        gda = GraphDataAssociation(graph)
+        gda.get_connected_targets(0)
+
+        event_mat_list = []
+        for event in events:
+            Omega = np.zeros((len(event), n_targs + 1), dtype=int)
+            for i in range(len(event)):
+                Omega[i, event[i]] = 1
+                if event[i] > 0:  # belongs to a target
+                    if graph[event[i] - 1, :].sum() > 0:  # connected to another target, add 1's for measurement to appropriate target
+                        for graph_index in range(len(graph[event[i] - 1, :])):
+                            if graph[event[i] - 1, graph_index] == 1:  # todo: add graph connections with logical indexing
+                                Omega[i, graph_index + 1] = 1
+            is_in = [(Omega == item).all() for item in event_mat_list]  # an entry will return true if Omega already present
+            if not event_mat_list:
+                event_mat_list.append(Omega)
+            else:
+                if not any(is_in):
+                    event_mat_list.append(Omega)
+
+        # Now take away matrices that have columns with more than one entry (except first column)
+        indices_to_delete = np.zeros(len(events))
+        valid_event_mats = []
+        for i in range(len(event_mat_list)):
+            for j in range(1, n_targs + 1):
+                if event_mat_list[i][:, j].sum() > 1:
+                    indices_to_delete[i] = 1
+
+        for i in range(len(event_mat_list)):
+            if indices_to_delete[i] == 0:
+                valid_event_mats.append(event_mat_list[i])
+
+        return valid_event_mats
 
     def get_feasible_graphs(self, robot, beliefs):
         """
@@ -413,18 +461,20 @@ class JPDAFMerged:
         graphs = []
         for i in range(1, n_targs): # i represents number of connections to make (will add fully resolved targets at end
             for j in range(n_targs):  # j represent index to start at
-                graph = np.zeros((n_targs, n_targs))
+                graph = np.zeros((n_targs, n_targs), dtype=int)
                 connections = 0
+                connected_indices = rotated[0]
                 for k in range(1, n_targs): # k iterating over all targets, either connecting it or making it solo
                     if connections != i:  #made the right number of corrections
                         graph[rotated[k-1], rotated[k]] = 1
                         connections += 1
+                        connected_indices.append(rotated[k])
                 rotated.rotate(1)
                 graph = graph + graph.transpose()
                 graphs.append(graph)
 
         # add fully resolved case
-        graph = np.zeros((n_targs, n_targs))
+        graph = np.zeros((n_targs, n_targs), dtype=int)
         graphs.insert(0, graph)
 
         return graphs
@@ -511,9 +561,27 @@ class JPDAFMerged:
 
 class GraphDataAssociation:
 
-    def __init__(self, adjacency, Omega):
+    def __init__(self, adjacency, Omega=None):
         self.adjacency = adjacency
         self.Omega = Omega
+
+
+    def get_connected_targets(self, targ_index):
+        """
+        function that takes a target index (starting at zero and produces a list of target indices that are connected
+        to it
+        :param targ_index:
+        :return:
+        """
+        row = self.adjacency[targ_index, :]
+        connected = []
+        for i in range(len(row)):
+            if row[i] == 1:
+                connected.append[i]
+
+        return 0
+
+
 
 
 def get_bearings(robot, beliefs):
