@@ -365,9 +365,12 @@ class JPDAFMerged:
         resolution_matrix = self.get_resolution_matrix(beliefs, own_state)
         graphs = self.get_feasible_graphs(robot, beliefs)
 
-        # Create all data association hypotheses for each
-        hypotheses = self.get_graph_data_association_hypotheses(measurements, graphs, beliefs)
+        # Create all data association hypotheses for each graph
+        graph_data_association_list = self.get_graph_data_association_hypotheses(measurements, graphs, beliefs)
 
+        #for each GraphDataAssociation object, calculate the probability of each data association
+        for gda in graph_data_association_list:
+            gda.calculate_association_probabilities()
         return 0
 
     def get_graph_data_association_hypotheses(self, measurements, graphs, beliefs):
@@ -386,12 +389,13 @@ class JPDAFMerged:
         rows_list = m_meas * [meas_range]  # every measurment could come from every target, or clutter
         all_events = list(IT.product(*rows_list))
 
-        event_mats = []
+        gda_list = []
         for i in range(len(graphs)):
-            #valid_event_mats = self.get_data_associations_for_graph(measurements, graphs[i], beliefs)
-            valid_events = self.get_valid_events(all_events, n_targs, graphs[i])
-            event_mats.append(valid_events)
-        return 0
+            gda = GraphDataAssociation(graphs[i])
+            gda.build_data_association_hypotheses(all_events)
+            gda_list.append(gda)
+
+        return gda_list
 
     def get_valid_events(self, events, n_targs, graph):
         """
@@ -545,9 +549,57 @@ class JPDAFMerged:
 
 class GraphDataAssociation:
 
-    def __init__(self, graph, associations):
+    def __init__(self, graph):
         self.graph = graph
-        self.associations = associations
+        self.data_associations = None
+        self.association_probabilities = None
+
+    def calculate_association_probabilities(self):
+        """
+        function that calculates and stores the probability of each data association for the  graph
+        :return: None
+        """
+
+        return None
+
+    def build_data_association_hypotheses(self, events):
+        """
+        takes a list of all possible events and generates feasible data associations given the graph
+        :param events: events given in rows list format. One entry per row with index of column to add a 1
+        :return:
+        """
+        n_targs = self.graph.n_vertices
+        event_mat_list = []
+        for event in events:
+            Omega = np.zeros((len(event), n_targs + 1), dtype=int)
+            for i in range(len(event)):  # i represent measurement number, event[i] is the column (target) to assign a 1
+                Omega[i, event[i]] = 1
+                if event[i] > 0:  # belongs to a target
+                    if self.graph.is_connected(
+                            event[i] - 1):  # connected to another target, add 1's for measurement to appropriate target
+                        connected_targs = self.graph.get_connected_targets(event[i] - 1)
+                        Omega[i, connected_targs] = 1
+            is_in = [(Omega == item).all() for item in
+                     event_mat_list]  # an entry will return true if Omega already present
+            if not event_mat_list:
+                event_mat_list.append(Omega)
+            else:
+                if not any(is_in):
+                    event_mat_list.append(Omega)
+
+        # Now take away matrices that have columns with more than one entry (except first column)
+        indices_to_delete = np.zeros(len(events))
+        valid_event_mats = []
+        for i in range(len(event_mat_list)):
+            for j in range(1, n_targs + 1):
+                if event_mat_list[i][:, j].sum() > 1:
+                    indices_to_delete[i] = 1
+
+        for i in range(len(event_mat_list)):
+            if indices_to_delete[i] == 0:
+                valid_event_mats.append(event_mat_list[i])
+
+        self.data_associations = valid_event_mats
 
 class Graph:
 
