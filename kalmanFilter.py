@@ -12,6 +12,26 @@ class GaussianBelief:
         return self._cov.copy()
 
 
+def KalmanFilterMeasurementUpdate(mean_predict, cov_predict, H, V, Z):
+    """
+    this kalman filter doesn't take the prior beliefs but works off the existing predicted belief
+    :param mean_predict:
+    :param cov_predict:
+    :param H:
+    :param V:
+    :param Z:
+    :return:
+    """
+    innovation_cov = H @ (cov_predict @ H.transpose()) + V
+    z_predict = H @ mean_predict
+    kalman_gain = cov_predict @ H.transpose() @ (np.linalg.inv(innovation_cov))
+    mean_upate = mean_predict + kalman_gain @ (Z - z_predict)
+    C = np.eye(cov_predict.shape[0]) - kalman_gain @ H
+    cov_update = C @ cov_predict
+
+    output = GaussianBelief(mean_upate, cov_update)
+    return output
+
 
 def KalmanFilter(mean_prior, cov_prior, A, W, H, V, innovation, debug = 0):
 

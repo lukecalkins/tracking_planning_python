@@ -2,7 +2,8 @@ import itertools as IT
 import numpy as np
 from utils import restrict_angle
 from sensor import Measurement
-from kalmanFilter import GaussianBelief
+from kalmanFilter import GaussianBelief, KalmanFilterMeasurementUpdate
+from scipy.stats import poisson
 
 from copy import copy
 from collections import deque
@@ -14,6 +15,7 @@ class JPDAF:
         self._gate_level = gate_level
         self._verbose = verbose
         self._clutter_density = clutter_density
+
 
     def filter(self, measurements, robot):
         """
@@ -334,12 +336,13 @@ class JPDAF:
 
 class JPDAFMerged:
 
-    def __init__(self, sensor, unresolved_resolution, clutter_density, gate_level=0.99, verbose=False):
+    def __init__(self, sensor, unresolved_resolution, clutter_density, FOV=2*np.pi, gate_level=0.99, verbose=False):
         self.sensor = sensor
         self.bearing_res = unresolved_resolution
         self._clutter_density = clutter_density
         self._gate_level = gate_level
         self._verbose = verbose
+        self._FOV = FOV
         self._inn_cov_list = []   # each iteration, this will be populated with the innovation covariance of each target
         self._z_predict_list = []
         self._H_k_list = []
@@ -358,11 +361,16 @@ class JPDAFMerged:
         self._inn_cov_list = []
         self._z_predict_list = []
         self._H_k_list = []
+        z_dim = robot.sensor.z_dim
+        meas_noise = robot.sensor.get_b_sigma()
 
-        own_state = robot.getState()
+        ownship = robot.getState()
         beliefs = self.get_predicted_beliefs(robot)
+        full_belief = self.get_full_predicted_belief(beliefs)
+        H_tilde = self.build_H_tilde(beliefs, ownship, z_dim)
 
-        resolution_matrix = self.get_resolution_matrix(beliefs, own_state)
+
+        resolution_matrix = self.get_resolution_matrix(beliefs, ownship)
         graphs = self.get_feasible_graphs(robot, beliefs)
 
         # Create all data association hypotheses for each graph
@@ -370,8 +378,11 @@ class JPDAFMerged:
 
         #for each GraphDataAssociation object, calculate the probability of each data association
         for gda in graph_data_association_list:
-            gda.calculate_association_probabilities()
-        return 0
+            gda.calculate_association_probabilities(self._clutter_density, self._FOV, self.sensor._detection_prob)
+            gda.build_C_k_matrices()
+            gda.perform_measurement_update(full_belief, H_tilde, meas_noise, measurements)
+
+        return None
 
     def get_graph_data_association_hypotheses(self, measurements, graphs, beliefs):
         """
@@ -485,6 +496,50 @@ class JPDAFMerged:
 
         return P_u
 
+    def build_H_tilde(self, targ_predict_beliefs, ownship, z_dim):
+        """
+        this function takes the beliefs
+        :param beliefs:
+        :return:
+        """
+        y_dim = targ_predict_beliefs[0]._mean.shape[0]
+        num_targs = len(targ_predict_beliefs)
+        H_tilde = np.zeros((z_dim * num_targs, y_dim * num_targs))
+        for i in range(num_targs):
+            start_row = i * z_dim
+            stop_row = start_row + z_dim
+            start_col = i * y_dim
+            stop_col = start_col + y_dim
+            z_predict = self.sensor.observationModel(ownship, targ_predict_beliefs[i]._mean)
+            H = np.zeros((z_dim, y_dim))
+            V = np.zeros((z_dim, z_dim))
+            self.sensor.getJacobian(H, V, ownship, targ_predict_beliefs[i]._mean)
+            self._H_k_list.append(H)
+            self._z_predict_list.append(z_predict)
+            H_tilde[start_row:stop_row, start_col:stop_col] = H
+
+        return H_tilde
+
+    def get_full_predicted_belief(self, beliefs):
+        """
+        same as get_predicted beliefs  but just stacking all target beliefs into a single state vector and
+        covariance matrix
+        :param beliefs: list of beliefs
+        :return:
+        """
+        y_dim = beliefs[0]._mean.shape[0]
+        num_targs = len(beliefs)
+        system_state_vector = np.zeros((num_targs * y_dim,  1))
+        system_covariance = np.zeros((num_targs * y_dim, num_targs * y_dim))
+        for i in range(num_targs):
+            start = i * y_dim
+            stop = start + y_dim
+            system_state_vector[start:stop] = beliefs[i]._mean
+            system_covariance[start:stop, start:stop] = beliefs[i]._cov
+        system_belief = GaussianBelief(system_state_vector, system_covariance)
+
+        return system_belief
+
     def get_predicted_beliefs(self, robot):
         """
         function that will take targets from the robot target model and generate predicted mean and covariance for the
@@ -499,7 +554,7 @@ class JPDAFMerged:
             y_targ_belief = target.getState()
             cov_targ_belief = target.getCovariance()
             A = target.getJacobian()
-            W =  target.getNoise()
+            W = target.getNoise()
             y_targ_predict = A @ y_targ_belief
             cov_targ_predict = A @ cov_targ_belief @ A.transpose() + W
             predicted_belief = GaussianBelief(y_targ_predict, cov_targ_predict)
@@ -551,14 +606,122 @@ class GraphDataAssociation:
 
     def __init__(self, graph):
         self.graph = graph
-        self.data_associations = None
-        self.association_probabilities = None
+        self.data_associations = []
+        self.association_probabilities = []
+        self.C_k_list = []
+        self.measurement_updated_beliefs = []
 
-    def calculate_association_probabilities(self):
+    def perform_measurement_update(self, full_belief, H_tilde, sensor_noise, measurements):
+        """
+        takes full system beliefs and covariance and performs the measurments update for each possible data association
+        in the graph
+        :param full_belief:
+        :param H_tilde:
+        :param sensor_noise
+        :param measurements
+        :return:
+        """
+        for i in range(len(self.data_associations)):
+            if self.C_k_list[i] is None:
+                self.measurement_updated_beliefs.append(full_belief)
+            else:
+                H_caron = self.C_k_list[i] @ H_tilde
+                Z_k_target, num_target_per_meas = self.get_target_generated_measurements(self.data_associations[i], measurements)
+                V = self.build_measurement_covariance_merged(sensor_noise, num_target_per_meas)
+                self.measurement_updated_beliefs.append(KalmanFilterMeasurementUpdate(full_belief._mean, full_belief._cov,
+                                                                                      H_caron, V, Z_k_target))
+
+    def build_measurement_covariance_merged(self, sensor_noise, num_target_per_meas):
+        """
+        build measurement noise covariance matrix used in kalman filter. Size of variance depends on number of targets
+        that generated the measurement
+        :param sensor_noise: sensor noise variance paramter
+        :param num_target_per_meas: vector with each entry containing the number of targets that generated that measurement
+        :return: V: measurement noise covariance matrix
+        """
+        num_targ_meas = num_target_per_meas.shape[0]
+        V = np.zeros((num_targ_meas, num_targ_meas))
+        for i in range(num_targ_meas):
+            V[i, i] = num_target_per_meas[i] * sensor_noise
+        return V
+
+    def get_target_generated_measurements(self, event_mat, measurements):
+        """
+        returns vector of target generated measurements in order of
+        :param event_mat:
+        :param measurements:
+        :return:
+        """
+        num_meas = len(measurements)
+        num_clutter_meas = event_mat[:, 0].sum()
+        num_targ_meas = num_meas - num_clutter_meas
+
+        Z_k_target = np.zeros((num_targ_meas, 1))
+        num_targets_per_meas = np.zeros(num_targ_meas)
+        targ_meas_index = 0
+        for i in range(num_meas):
+            if sum(event_mat[i, 1:]) > 0:  # measurement comes from target
+                Z_k_target[targ_meas_index, 0] = measurements[i].getZ()
+                num_targets_per_meas[targ_meas_index] = sum(event_mat[i, 1:])
+                targ_meas_index += 1
+        return Z_k_target, num_targets_per_meas
+
+
+    def build_C_k_matrices(self):
+        """
+        build the C_k matrix for each data association hypothesis.
+        :return:
+        """
+        for event_mat in self.data_associations:
+            self.C_k_list.append(self.get_C_k_from_event(event_mat))
+
+    def get_C_k_from_event(self, event_mat):
+        num_meas = event_mat.shape[0]
+        num_targ = self.graph.n_vertices
+        num_clutter_meas = event_mat[:, 0].sum()
+        num_targ_meas = num_meas - num_clutter_meas
+        if num_targ_meas == 0:
+            return None
+        C_k = np.zeros((num_targ_meas, num_targ))
+        targ_meas_index = 0
+
+        for i in range(num_meas):
+            if event_mat[i, 1:].sum() > 0:  # target generated meas
+                target_indices = np.nonzero(event_mat[i, 1:])[0]
+                C_k[targ_meas_index, target_indices] = 1/len(target_indices)
+                targ_meas_index += 1
+
+        return C_k
+
+    def calculate_association_probabilities(self, clutter_density, FOV, detection_prob):
         """
         function that calculates and stores the probability of each data association for the  graph
         :return: None
         """
+        num_meas = self.data_associations[0].shape[0]
+        num_targ = self.data_associations[0].shape[1] - 1
+        for association_mat in self.data_associations:
+            num_clutter_meas = np.count_nonzero(association_mat[:, 0])
+            num_targ_meas = num_meas - num_clutter_meas
+            prob_clutter = poisson.pmf(num_clutter_meas, clutter_density*FOV)
+            running_prob = prob_clutter
+            visited = set()
+            for i in range(1, num_targ + 1):
+                if i not in visited:
+                    if (association_mat[:, i] > 0).any():
+                        running_prob = running_prob * detection_prob
+                        visited.add(i)
+                        if self.graph.is_connected(i - 1):
+                            connected_nodes = self.graph.get_connected_targets(i - 1)
+                            for j in connected_nodes:
+                                visited.add(j)
+                    else:
+                        running_prob = running_prob * (1 - detection_prob)
+                        visited.add(i)
+                        # print('In else')
+
+            self.association_probabilities.append(running_prob)
+
 
         return None
 

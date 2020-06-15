@@ -32,6 +32,9 @@ class BearingSensor(Sensor):
         self._b_sigma = b_sigma
         self._detection_prob = detection_prob
 
+    def get_b_sigma(self):
+        return self._b_sigma
+
     def senseTargets(self, own_state, targets):
 
         output = []
