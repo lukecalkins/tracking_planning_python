@@ -1,9 +1,12 @@
 import itertools as IT
 import numpy as np
-from utils import restrict_angle
+from utils import restrict_angle, kron_delta
 from sensor import Measurement
 from kalmanFilter import GaussianBelief, KalmanFilterMeasurementUpdate
-from scipy.stats import poisson
+from scipy.stats import poisson, multivariate_normal
+from scipy.linalg import sqrtm
+from math import factorial
+
 
 from copy import copy
 from collections import deque
@@ -336,13 +339,13 @@ class JPDAF:
 
 class JPDAFMerged:
 
-    def __init__(self, sensor, unresolved_resolution, clutter_density, FOV=2*np.pi, gate_level=0.99, verbose=False):
+    def __init__(self, sensor, unresolved_resolution, clutter_density, gate_level=0.99, FOV=2*np.pi, verbose=False):
         self.sensor = sensor
         self.bearing_res = unresolved_resolution
         self._clutter_density = clutter_density
         self._gate_level = gate_level
         self._verbose = verbose
-        self._FOV = FOV
+        self._FOV = FOV  # sensor field of view in radians
         self._inn_cov_list = []   # each iteration, this will be populated with the innovation covariance of each target
         self._z_predict_list = []
         self._H_k_list = []
@@ -362,16 +365,20 @@ class JPDAFMerged:
         self._z_predict_list = []
         self._H_k_list = []
         z_dim = robot.sensor.z_dim
-        meas_noise = robot.sensor.get_b_sigma()
+        y_dim = robot.tmm.targets[0]._y_dim
+        b_sigma = robot.sensor.get_b_sigma()
 
         ownship = robot.getState()
         beliefs = self.get_predicted_beliefs(robot)
         full_belief = self.get_full_predicted_belief(beliefs)
         H_tilde = self.build_H_tilde(beliefs, ownship, z_dim)
+        z_target_predict = np.array(self._z_predict_list)
 
-
-        resolution_matrix = self.get_resolution_matrix(beliefs, ownship)
+        #resolution_matrix = self.get_resolution_matrix(beliefs, ownship)
         graphs = self.get_feasible_graphs(robot, beliefs)
+        for graph in graphs:
+            graph.build_resolution_update_multipliers()
+            graph.build_resolution_update_D_matrices()
 
         # Create all data association hypotheses for each graph
         graph_data_association_list = self.get_graph_data_association_hypotheses(measurements, graphs, beliefs)
@@ -380,9 +387,42 @@ class JPDAFMerged:
         for gda in graph_data_association_list:
             gda.calculate_association_probabilities(self._clutter_density, self._FOV, self.sensor._detection_prob)
             gda.build_C_k_matrices()
-            gda.perform_measurement_update(full_belief, H_tilde, meas_noise, measurements)
+            gda.perform_measurement_update(full_belief, H_tilde, b_sigma, measurements, z_target_predict, self._FOV)
+            gda.perform_resolution_update(H_tilde, self.bearing_res)
 
-        return None
+        # Weights and gaussian beliefs calculated for all graphs, data associations and resolutions updates
+        # Now perform moment matching on entire gaussian mixture.
+        output = self.full_JPDAF_update(graph_data_association_list, y_dim)
+
+        return output
+
+    def full_JPDAF_update(self, graph_data_association_list, y_dim):
+        """
+        this function takes the means, covariances and weights from all the graphs and data association hypotheses and
+        performs the full moment matching for the JPDAF.
+        :param graph_data_association_lsit:
+        :return:
+        """
+        N_targets = graph_data_association_list[0].graph.n_vertices
+        mean_update = np.zeros((N_targets * y_dim, 1))
+        cov_update = np.zeros((N_targets * y_dim, N_targets * y_dim))
+
+        # calculate normalizing constant
+        all_probabilities_list = []
+        for gda in graph_data_association_list:
+            all_probabilities_list = all_probabilities_list +  gda.resolution_updated_probabilities
+        all_probabilities_as_array = np.array(all_probabilities_list)
+        normalizing_constant = all_probabilities_as_array.sum()
+        for gda in graph_data_association_list:
+            for i in range(len(gda.resolution_updated_beliefs)):
+                weight = gda.resolution_updated_probabilities[i] / normalizing_constant
+                mean_update = mean_update + weight * gda.resolution_updated_beliefs[i]._mean
+                cov_update = cov_update + weight * (gda.resolution_updated_beliefs[i]._cov + (gda.resolution_updated_beliefs[i]._mean - mean_update) @
+                                                    (gda.resolution_updated_beliefs[i]._mean - mean_update).transpose())
+
+
+        JPDAF_belief = GaussianBelief(mean_update, cov_update)
+        return JPDAF_belief
 
     def get_graph_data_association_hypotheses(self, measurements, graphs, beliefs):
         """
@@ -397,7 +437,7 @@ class JPDAFMerged:
         m_meas = len(measurements)
 
         meas_range = list(range(n_targs + 1))
-        rows_list = m_meas * [meas_range]  # every measurment could come from every target, or clutter
+        rows_list = m_meas * [meas_range]  # every measurement could come from every target, or clutter
         all_events = list(IT.product(*rows_list))
 
         gda_list = []
@@ -467,14 +507,15 @@ class JPDAFMerged:
         feasible_edges = []
         for i in range(n_targs - 1):
             feasible_edges.append((sorted_index[i], sorted_index[i + 1]))
-        feasible_edges.append((sorted_index[n_targs - 1], sorted_index[0]))
+        if n_targs > 2:
+            feasible_edges.append((sorted_index[n_targs - 1], sorted_index[0]))
 
         # construct all possible graphs of 0 edges, up to n_targs - 1 edges
         graphs = []
         for i in range(n_targs):
             edge_list = list(IT.combinations(feasible_edges, i))
             for edges in edge_list:
-                graphs.append(Graph(n_targs, edges))
+                graphs.append(Graph(n_targs, edges, feasible_edges))
 
         return graphs
 
@@ -608,41 +649,95 @@ class GraphDataAssociation:
         self.graph = graph
         self.data_associations = []
         self.association_probabilities = []
+        self.measurement_updated_probabilities = []
         self.C_k_list = []
         self.measurement_updated_beliefs = []
+        self.resolution_updated_beliefs = []
+        self.resolution_updated_probabilities = []
 
-    def perform_measurement_update(self, full_belief, H_tilde, sensor_noise, measurements):
+    def perform_resolution_update(self, H_tilde, bearing_res):
+        """
+        takes the measurement updated beliefs that are already stored and does a resolution update with the graph
+        :param H_tilde:
+        :return:
+        """
+        R_u = 1. / (np.sqrt(2 * np.log(2))) * bearing_res ** 2
+        N_targets = self.graph.n_vertices
+
+        association_index = 0
+        for meas_update in self.measurement_updated_beliefs:
+            mean = meas_update._mean
+            y_dim = mean.shape[0]//N_targets
+            cov = meas_update._cov
+            for k in range(len(self.graph.resolution_update_D_matrices)):
+                if len(self.graph.edge_multipliers[k]) == 0:  # belief multiplied by one in fully resolved
+                    self.resolution_updated_beliefs.append(meas_update)
+                    self.resolution_updated_probabilities.append(self.measurement_updated_probabilities[association_index])
+                    continue
+                D_mat = self.graph.resolution_update_D_matrices[k]
+                update_sign = self.graph.edge_multipliers_sign[k]
+                inn_cov = (D_mat @ H_tilde) @ cov @ (D_mat @ H_tilde).transpose() + R_u * np.eye(self.graph.n_vertices)
+                gain = cov @ (D_mat @ H_tilde).transpose() @ np.linalg.inv(inn_cov)
+                mean_update = mean + gain @ (np.zeros((self.graph.n_vertices, 1)) - D_mat @ H_tilde @ mean)
+                cov_update = (np.eye(N_targets * y_dim) - gain @ D_mat @ H_tilde) @ cov
+                self.resolution_updated_beliefs.append(GaussianBelief(mean_update, cov_update))
+                probability_factor = np.linalg.det(2 * np.pi * R_u * np.eye(N_targets))
+                probability_factor = probability_factor * multivariate_normal.pdf(np.zeros(N_targets), np.ndarray.flatten(D_mat @(H_tilde @ mean)),
+                                                                              inn_cov)
+                self.resolution_updated_probabilities.append(update_sign * probability_factor *
+                                                             self.measurement_updated_probabilities[association_index])
+            association_index += 1
+
+        # normalize resolution probabilities
+        #probabilities_as_array = np.array(self.resolution_updated_probabilities)
+        #self.resolution_updated_probabilities = 1./probabilities_as_array.sum() * probabilities_as_array
+
+        return None
+
+    def perform_measurement_update(self, full_belief, H_tilde, b_sigma, measurements, z_target_predict, FOV):
         """
         takes full system beliefs and covariance and performs the measurments update for each possible data association
         in the graph
         :param full_belief:
         :param H_tilde:
-        :param sensor_noise
+        :param b_sigma: measurement noise standard deviation
         :param measurements
+        :param FOV: sensor field of view (radians)
         :return:
         """
         for i in range(len(self.data_associations)):
+            association_mat = self.data_associations[i]
+            num_meas = association_mat.shape[0]
+            num_clutter_meas = association_mat[:, 0].sum()
+            num_targ_meas = num_meas - num_clutter_meas
             if self.C_k_list[i] is None:
                 self.measurement_updated_beliefs.append(full_belief)
+                self.measurement_updated_probabilities.append(self.association_probabilities[i] *
+                                                              1./(FOV**num_clutter_meas))
             else:
                 H_caron = self.C_k_list[i] @ H_tilde
                 Z_k_target, num_target_per_meas = self.get_target_generated_measurements(self.data_associations[i], measurements)
-                V = self.build_measurement_covariance_merged(sensor_noise, num_target_per_meas)
+                V = self.build_measurement_covariance_merged(b_sigma, num_target_per_meas)
+                #Z_k_target_predict = self.get_Z_k_target_predict(self.data_associations[i])
                 self.measurement_updated_beliefs.append(KalmanFilterMeasurementUpdate(full_belief._mean, full_belief._cov,
-                                                                                      H_caron, V, Z_k_target))
+                                                                                      H_caron, V, Z_k_target, self.C_k_list[i] @ z_target_predict))
+                measurement_likelihood = multivariate_normal.pdf(np.ndarray.flatten(Z_k_target),
+                                                                 np.ndarray.flatten(self.C_k_list[i] @ z_target_predict), V)
+                self.measurement_updated_probabilities.append(measurement_likelihood * 1./(FOV ** num_clutter_meas) *
+                                                              self.association_probabilities[i])
 
-    def build_measurement_covariance_merged(self, sensor_noise, num_target_per_meas):
+    def build_measurement_covariance_merged(self, b_sigma, num_target_per_meas):
         """
         build measurement noise covariance matrix used in kalman filter. Size of variance depends on number of targets
         that generated the measurement
-        :param sensor_noise: sensor noise variance paramter
+        :param b_sigma: sensor noise standard deviation parameter
         :param num_target_per_meas: vector with each entry containing the number of targets that generated that measurement
         :return: V: measurement noise covariance matrix
         """
         num_targ_meas = num_target_per_meas.shape[0]
         V = np.zeros((num_targ_meas, num_targ_meas))
         for i in range(num_targ_meas):
-            V[i, i] = num_target_per_meas[i] * sensor_noise
+            V[i, i] = num_target_per_meas[i] * (b_sigma ** 2)
         return V
 
     def get_target_generated_measurements(self, event_mat, measurements):
@@ -704,7 +799,7 @@ class GraphDataAssociation:
             num_clutter_meas = np.count_nonzero(association_mat[:, 0])
             num_targ_meas = num_meas - num_clutter_meas
             prob_clutter = poisson.pmf(num_clutter_meas, clutter_density*FOV)
-            running_prob = prob_clutter
+            running_prob = prob_clutter * factorial(num_clutter_meas) / factorial(num_meas)
             visited = set()
             for i in range(1, num_targ + 1):
                 if i not in visited:
@@ -766,10 +861,52 @@ class GraphDataAssociation:
 
 class Graph:
 
-    def __init__(self, n_vertices, edges):
+    def __init__(self, n_vertices, edges, feasible_edges):
         self.n_vertices = n_vertices
         self.edges = edges
+        self.feasible_edges = feasible_edges
         self.adjacency = self.build_adjacency()
+        self.non_edges = [edge for edge in feasible_edges if edge not in edges]
+        self.edge_multipliers = []
+        self.edge_multipliers_sign = []
+        self.resolution_update_D_matrices = []
+
+
+    def build_resolution_update_D_matrices(self):
+        """
+        function that takes each product of P_u terms in the resolution update and contructs the associated D matrix
+        that is used in the single step resolution update for that term.
+        :return:
+        """
+        for edge_set in self.edge_multipliers:
+            G = np.zeros((self.n_vertices, self.n_vertices))
+            for edge in edge_set:
+                pi_i_j = get_pi_i_j(edge, self.n_vertices)
+                G = G + pi_i_j @ pi_i_j.transpose()
+            D = sqrtm(G)
+            self.resolution_update_D_matrices.append(D)
+
+    def build_resolution_update_multipliers(self):
+
+        num_resolved = len(self.non_edges)
+        num_unresolved = len(self.edges)
+        edge_multipliers = []
+        edge_multipliers_sign = []
+        for i in range(num_resolved + 1):
+            edge_list = list(IT.combinations(self.non_edges, i))
+            for edge_set in edge_list:
+                edge_multipliers.append(list(edge_set))
+                if len(edge_set) % 2 == 0:
+                    edge_multipliers_sign.append(1)
+                else:
+                    edge_multipliers_sign.append(-1)
+        if num_unresolved > 0:
+            for edge_set in edge_multipliers:
+                for connected_edge in self.edges:
+                    edge_set.append(connected_edge)
+
+        self.edge_multipliers = edge_multipliers
+        self.edge_multipliers_sign = edge_multipliers_sign
 
     def build_adjacency(self):
         adjacency = np.zeros((self.n_vertices, self.n_vertices))
@@ -819,6 +956,23 @@ class Graph:
         correct_target_index_for_Omega = [targ + 1 for targ in connected_list]
 
         return correct_target_index_for_Omega
+
+##############################################
+############## End Graph #####################
+##############################################
+
+def get_pi_i_j(edge_pair, n):
+    """
+    returns pi_i_j vector from svennson2012multitarget
+    :param edge_pair:
+    :param n:
+    :return:
+    """
+    pi_i_j = np.zeros((n, 1))
+    for i in range(n):
+        pi_i_j[i] = kron_delta(i, edge_pair[0]) - kron_delta(i, edge_pair[1])
+
+    return pi_i_j
 
 def get_bearings(robot, beliefs):
     """

@@ -2,6 +2,15 @@ import math
 from copy import copy
 import numpy as np
 
+
+def kron_delta(i, j):
+
+    if i == j:
+        return 1
+    else:
+        return 0
+
+
 def propagateOwnshipEuler(osOld, speed, turnRateCommand, dt):
     osNew = copy(osOld)
     osNew[0] = osOld[0] + speed * np.cos(osOld[2]) * dt

@@ -20,6 +20,7 @@ class Parameters:
                 sense_node = yaml.load(sense_file, Loader=yaml.FullLoader)
                 self.detection_prob = sense_node['detection_prob']
                 self.unresolved_resolution = sense_node['unresolved_resolution']
+                self.masking_proximity = sense_node['masking_proximity']
             with open(target_config, 'r') as targ_file:
                 targ_node = yaml.load(targ_file, Loader=yaml.FullLoader)
                 self.y_dim = targ_node['targ_dim']

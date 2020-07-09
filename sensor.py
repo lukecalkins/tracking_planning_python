@@ -44,7 +44,7 @@ class BearingSensor(Sensor):
             if prob <= self._detection_prob:
                 output.append(measurement)
 
-        return output
+        return output, len(targets)
 
     def senseTargets_interference_2(self, own_state, targets, proximity):
         """
@@ -114,6 +114,16 @@ class BearingSensor(Sensor):
 
         num_targs_seen = len(targets) - masked_indicator.sum()
         return output, int(num_targs_seen)
+
+    def sense_targets_resolution_model(self, own_state, targets, bearing_res):
+        """
+
+        :param own_state:
+        :param targets:
+        :param bearing_res:
+        :return:
+        """
+
 
     def sense(self, x, target):
         y = target.getPosition()

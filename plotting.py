@@ -26,7 +26,7 @@ class StatePlotter:
 
     def __init__(self, mapmin, mapmax, title, plotNum=1, video=False, track_stats_flag=False):
 
-        self.fig = plt.figure(plotNum, figsize=(10,5))
+        self.fig = plt.figure(plotNum, figsize=(7,5))
         self.mapmin = mapmin
         self.mapmax = mapmax
         self.title = title
@@ -132,6 +132,7 @@ class StatePlotter:
 
         self.clear_plot()
         self.draw_env()
+        self.ax.set_title("Number of targets visible: " + str(num_targs_seen))
         if masked == True:
             self.ax.set_title("MASKED!")
         clr_list = ['r', 'b', 'g', 'm']

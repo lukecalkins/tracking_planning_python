@@ -7,4 +7,5 @@ min_hang: -180
 max_hang: 180
 b_sigma: 0.021  # standard deviation in radians
 detection_prob: 0.99
-unresolved_resolution: 0.3491  # 0.0873 = 5 degrees, 0.1745 = 10 degrees, 0.2618 = 15 degrees, 0.3491 = 20 degrees
+unresolved_resolution: 0.1745  # 0.0873 = 5 degrees, 0.1745 = 10 degrees, 0.2618 = 15 degrees, 0.3491 = 20 degrees
+masking_proximity: 5   # relative bearing separationg for target masking to occur
