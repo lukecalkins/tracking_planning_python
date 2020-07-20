@@ -17,7 +17,7 @@ print(restrict_angle(b0-b1), " radians, ", restrict_angle(b0-b1)*180/np.pi, " de
 yaml_file = 'config/init_info_planner.yaml'
 p = Parameters(yaml_file)
 
-if False:
+if True:
     angles = np.linspace(-30, 30)
     angles_radians = angles * pi/180
     bearing_res = p.unresolved_resolution
@@ -67,7 +67,7 @@ for kk in range(p.Tmax):
 
     print("Timstep: ", kk)
 
-file_name = 'JPDAF/merged/2_targ/2_targ_JPDAF_mask_5'
+file_name = 'JPDAF/merged/2_targ/2_targ_maksed_10'
 plotter.save_video(filename=file_name, fps=5)
 
 

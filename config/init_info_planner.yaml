@@ -14,7 +14,7 @@ map_min: [-1000, -1000]
 map_max: [1000, 1000]
 
 # Estimator/planner info
-clutter_density: 0.3183  # 3.183 = 20 per 360 degrees ~ 1 every 18 degrees
+clutter_density: 0.03183  # 3.183 = 20 per 360 degrees ~ 1 every 18 degrees
 gate_level: 0.99
 estimator_verbose: False
 horizon: 10  # planning horizon
