@@ -17,12 +17,12 @@ print(restrict_angle(b0-b1), " radians, ", restrict_angle(b0-b1)*180/np.pi, " de
 yaml_file = 'config/init_info_planner.yaml'
 p = Parameters(yaml_file)
 
-if True:
+if False:
     angles = np.linspace(-30, 30)
     angles_radians = angles * pi/180
     bearing_res = p.unresolved_resolution
-    R_u = 1./(np.sqrt(2*np.log(2))) * bearing_res**2
-    P_u = np.exp(-angles_radians * 1./R_u * angles_radians)
+    R_u = bearing_res ** 2
+    P_u = np.exp(-1./2 * angles_radians * 1./R_u * angles_radians)
     fig, ax = plt.subplots()
     ax.plot(angles, P_u)
     ax.set_xlabel('$\Delta$ bearing')
@@ -52,7 +52,8 @@ for kk in range(p.Tmax):
 
     for i in range(len(robots)):
         #measurements, num_targets_seen = robots[0].sensor.senseTargets(robots[0].getState(), target_model.getTargets())
-        measurements, num_targets_seen = robots[i].sensor.senseTargets_interference_n(robots[i].getState(), target_model.getTargets(), p.masking_proximity)
+        #measurements, num_targets_seen = robots[i].sensor.senseTargets_interference_n(robots[i].getState(), target_model.getTargets(), p.masking_proximity)
+        measurements, num_targets_seen = robots[i].sensor.senseTargets_resolution_model_2(robots[i].getState(), target_model.getTargets(), p.unresolved_resolution)
         add_clutter(measurements, p.clutter_density)
 
         #JPDAF.filter(measurements, robots[i])
@@ -62,12 +63,12 @@ for kk in range(p.Tmax):
 
     target_model.forwardSimulate()
     plotter.plot_state(robots, target_model.getTargets(), num_targs_seen=num_targets_seen,
-                       robot_size=50, target_size=10)
+                       robot_size=50, target_size=10, timestep=kk)
     plt.pause(0.1)
 
     print("Timstep: ", kk)
 
-file_name = 'JPDAF/merged/2_targ/2_targ_maksed_10'
+file_name = 'JPDAF/merged/2_targ/2_targ_resolution_meas'
 plotter.save_video(filename=file_name, fps=5)
 
 

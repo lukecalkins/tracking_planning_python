@@ -389,8 +389,8 @@ class JPDAFMerged:
         for gda in graph_data_association_list:
             gda.calculate_association_probabilities(self._clutter_density, self._FOV, self.sensor._detection_prob)
             gda.build_C_k_matrices()
-            gda.perform_measurement_update(full_belief, H_tilde, b_sigma, measurements, z_target_predict, self._FOV)
-            gda.perform_resolution_update(H_tilde, self.bearing_res, z_target_predict)
+            gda.perform_measurement_update_one_step(full_belief, H_tilde, b_sigma, measurements, z_target_predict, self._FOV)
+            gda.perform_resolution_update_one_step(H_tilde, self.bearing_res, z_target_predict)
 
         # Weights and gaussian beliefs calculated for all graphs, data associations and resolutions updates
         # Now perform moment matching on entire gaussian mixture.
@@ -415,12 +415,20 @@ class JPDAFMerged:
             all_probabilities_list = all_probabilities_list +  gda.resolution_updated_probabilities
         all_probabilities_as_array = np.array(all_probabilities_list)
         normalizing_constant = all_probabilities_as_array.sum()
+
+        #first update the mean
         for gda in graph_data_association_list:
             for i in range(len(gda.resolution_updated_beliefs)):
                 weight = gda.resolution_updated_probabilities[i] / normalizing_constant
                 mean_update = mean_update + weight * gda.resolution_updated_beliefs[i]._mean
-                cov_update = cov_update + weight * (gda.resolution_updated_beliefs[i]._cov + (gda.resolution_updated_beliefs[i]._mean - mean_update) @
-                                                    (gda.resolution_updated_beliefs[i]._mean - mean_update).transpose())
+
+        #use the moment matched mean for the covariance update
+        for gda in graph_data_association_list:
+            for i in range(len(gda.resolution_updated_probabilities)):
+                weight = gda.resolution_updated_probabilities[i] / normalizing_constant
+                cov_update = cov_update + weight * (gda.resolution_updated_beliefs[i]._cov + (
+                            gda.resolution_updated_beliefs[i]._mean - mean_update) @
+                                                    (gda.resolution_updated_beliefs[i]._mean - mean_update).T)
 
 
         JPDAF_belief = GaussianBelief(mean_update, cov_update)
@@ -657,13 +665,25 @@ class GraphDataAssociation:
         self.resolution_updated_beliefs = []
         self.resolution_updated_probabilities = []
 
-    def perform_resolution_update(self, H_tilde, bearing_res, z_target_predict):
+    def perform_resolution_update_sequential(self, H_tilde, bearing_res, z_target_predict):
+        """
+        take the measurement updated beliefs that are already stored and performs sequential resolution update for each
+        term in the summation or (32) in svenson2012multitarget
+        :param H_tilde:
+        :param bearing_res:
+        :param z_target_predict:
+        :return:
+        """
+
+
+    def perform_resolution_update_one_step(self, H_tilde, bearing_res, z_target_predict):
         """
         takes the measurement updated beliefs that are already stored and does a resolution update with the graph
         :param H_tilde:
         :return:
         """
-        R_u = 1. / (np.sqrt(2 * np.log(2))) * bearing_res ** 2
+        #R_u = 1. / (np.sqrt(2 * np.log(2))) * bearing_res ** 2
+        R_u = bearing_res ** 2
         N_targets = self.graph.n_vertices
 
         association_index = 0
@@ -678,10 +698,10 @@ class GraphDataAssociation:
                     continue
                 D_mat = self.graph.resolution_update_D_matrices[k]
                 update_sign = self.graph.edge_multipliers_sign[k]
-                inn_cov = (D_mat @ H_tilde) @ cov @ (D_mat @ H_tilde).T + R_u * np.eye(self.graph.n_vertices)
+                inn_cov = (D_mat @ H_tilde) @ cov @ (D_mat @ H_tilde).T + R_u * np.eye(N_targets)
                 gain = cov @ (D_mat @ H_tilde).T @ np.linalg.inv(inn_cov)
                 #mean_update = mean + gain @ (np.zeros((self.graph.n_vertices, 1)) - D_mat @ H_tilde @ mean)
-                mean_update = mean + gain @ (np.zeros((self.graph.n_vertices, 1)) - D_mat @ z_target_predict)
+                mean_update = mean + gain @ (np.zeros((N_targets, 1)) - D_mat @ z_target_predict)
                 cov_update = (np.eye(N_targets * y_dim) - gain @ D_mat @ H_tilde) @ cov
                 self.resolution_updated_beliefs.append(GaussianBelief(mean_update, cov_update))
                 probability_factor = sqrt(np.linalg.det(2 * np.pi * R_u * np.eye(N_targets)))
@@ -699,7 +719,7 @@ class GraphDataAssociation:
 
         return None
 
-    def perform_measurement_update(self, full_belief, H_tilde, b_sigma, measurements, z_target_predict, FOV):
+    def perform_measurement_update_one_step(self, full_belief, H_tilde, b_sigma, measurements, z_target_predict, FOV):
         """
         takes full system beliefs and covariance and performs the measurments update for each possible data association
         in the graph
@@ -742,7 +762,7 @@ class GraphDataAssociation:
         num_targ_meas = num_target_per_meas.shape[0]
         V = np.zeros((num_targ_meas, num_targ_meas))
         for i in range(num_targ_meas):
-            V[i, i] = num_target_per_meas[i] * (b_sigma ** 2)
+            V[i, i] = (num_target_per_meas[i] * b_sigma) ** 2
         return V
 
     def get_target_generated_measurements(self, event_mat, measurements):

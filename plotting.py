@@ -128,11 +128,11 @@ class StatePlotter:
 
 
 
-    def plot_state(self, robots, targets, planner_output = None, num_targs_seen = None, masked = False, robot_size=1, target_size=1):
+    def plot_state(self, robots, targets, planner_output = None, num_targs_seen = None, masked = False, robot_size=1, target_size=1, timestep=None):
 
         self.clear_plot()
         self.draw_env()
-        self.ax.set_title("Number of targets visible: " + str(num_targs_seen))
+        self.ax.set_title("Number of targets visible: " + str(num_targs_seen) + "   Timestep: " + str(timestep))
         if masked == True:
             self.ax.set_title("MASKED!")
         clr_list = ['r', 'b', 'g', 'm']

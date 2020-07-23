@@ -115,14 +115,42 @@ class BearingSensor(Sensor):
         num_targs_seen = len(targets) - masked_indicator.sum()
         return output, int(num_targs_seen)
 
-    def sense_targets_resolution_model(self, own_state, targets, bearing_res):
+    def senseTargets_resolution_model_2(self, own_state, targets, bearing_res):
         """
-
+        for 2 targets, this will return measurements according to the resolution model used in the merged measurement
+        tracker
         :param own_state:
         :param targets:
         :param bearing_res:
         :return:
         """
+
+        #find merging probability
+        true_bearings = []
+        measurements = []
+        for target in targets:
+            true_bearings.append(self.observationModel(own_state, target.getPosition()))
+            measurements.append(self.sense(own_state, target))
+        true_bearings = np.array(true_bearings)
+        true_bearings_2pi = true_bearings + np.pi
+
+        #calculate probability of targets merging
+        delta_bearing = np.abs(true_bearings[0] - true_bearings[1])
+        if delta_bearing > np.pi:
+            delta_bearing = 2*np.pi - delta_bearing
+        p_merged = np.exp(-1/2 * delta_bearing * 1./(bearing_res  ** 2)  * delta_bearing)
+        print("Merging Probability: ", p_merged)
+        rand_draw = np.random.uniform()
+        if p_merged > rand_draw:
+            # measurement of the mean target bearing
+            mean_bearing = true_bearings_2pi.mean() - np.pi
+            noise = np.random.normal(0, 2 * self._b_sigma)
+            measurement = mean_bearing + noise
+            measurement = Measurement(np.array([measurement]), None, 1)
+            return [measurement], 1
+        else:
+            return measurements, 2
+
 
 
     def sense(self, x, target):
