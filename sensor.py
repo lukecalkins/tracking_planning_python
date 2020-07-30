@@ -170,15 +170,15 @@ class BearingSensor(Sensor):
         # sort the bearings
         true_bearings = np.array(true_bearings)
         true_bearings_2pi = true_bearings + np.pi
-        sorted_index = sorted(range(len(true_bearings_2pi)), key=lambda k: true_bearings_2pi[k])
+        sorted_index = sorted(range(len(true_bearings_2pi)), key=lambda k: true_bearings_2pi[k], reverse=True)
 
         # construct feasible edge set
         feasible_edges = []
         for i in range(n_targs - 1):
-            bearing_i = true_bearings[sorted_index[i]]
-            bearing_j = true_bearings[sorted_index[i + 1]]
+            bearing_i = true_bearings[sorted_index[n_targs - 1]]
+            bearing_j = true_bearings[sorted_index[0]]
             bearing_difference = bearing_i - bearing_j
-
+            # todo: fix case where angle is negative
             feasible_edges.append((sorted_index[i], sorted_index[i + 1]))
         if n_targs > 2:
             bearing_i = true_bearings[sorted_index[n_targs - 1]]

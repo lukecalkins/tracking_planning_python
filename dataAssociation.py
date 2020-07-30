@@ -511,7 +511,7 @@ class JPDAFMerged:
         """
         bearings = get_bearings(robot, beliefs)
         bearings_2pi = bearings + np.pi
-        sorted_index = sorted(range(len(bearings_2pi)), key=lambda k: bearings_2pi[k])
+        sorted_index = sorted(range(len(bearings_2pi)), key=lambda k: bearings_2pi[k], reverse=True)
         n_targs = len(beliefs)
 
         # construct feasible edge set
@@ -519,7 +519,11 @@ class JPDAFMerged:
         for i in range(n_targs - 1):
             feasible_edges.append((sorted_index[i], sorted_index[i + 1]))
         if n_targs > 2:
-            feasible_edges.append((sorted_index[n_targs - 1], sorted_index[0]))
+            bearing_i = bearings[sorted_index[n_targs - 1]]
+            bearing_j = bearings[sorted_index[0]]
+            bearing_diff = bearing_i - bearing_j
+            if bearing_diff + 2 * np.pi < np.pi:
+                feasible_edges.append((sorted_index[n_targs - 1], sorted_index[0]))
 
         # construct all possible graphs of 0 edges, up to n_targs - 1 edges
         graphs = []
