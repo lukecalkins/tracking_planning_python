@@ -6,6 +6,7 @@ from kalmanFilter import GaussianBelief, KalmanFilterMeasurementUpdate
 from scipy.stats import poisson, multivariate_normal
 from scipy.linalg import sqrtm
 from math import factorial
+from graph import Graph
 
 sqrt = np.sqrt
 
@@ -883,7 +884,7 @@ class GraphDataAssociation:
                 valid_event_mats.append(event_mat_list[i])
 
         self.data_associations = valid_event_mats
-
+'''
 class Graph:
 
     def __init__(self, n_vertices, edges, feasible_edges):
@@ -909,7 +910,7 @@ class Graph:
                 pi_i_j = get_pi_i_j(edge, self.n_vertices)
                 G = G + pi_i_j @ pi_i_j.transpose()
             D = sqrtm(G)
-            self.resolution_update_D_matrices.append(D)
+            self.resolution_update_D_matrices.append(np.real(D))
 
     def build_resolution_update_multipliers(self):
 
@@ -998,7 +999,7 @@ def get_pi_i_j(edge_pair, n):
         pi_i_j[i] = kron_delta(i, edge_pair[0]) - kron_delta(i, edge_pair[1])
 
     return pi_i_j
-
+'''
 def get_bearings(robot, beliefs):
     """
     takes target beliefs and returns list of bearings to each target belief state

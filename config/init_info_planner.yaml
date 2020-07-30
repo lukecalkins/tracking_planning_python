@@ -10,6 +10,7 @@ plannerConfig: config/planner.yaml
 
 Tmax: 80
 samp: 1.0
+random_seed: 1
 map_min: [-1000, -1000]
 map_max: [1000, 1000]
 

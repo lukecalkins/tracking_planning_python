@@ -135,7 +135,7 @@ class StatePlotter:
         self.ax.set_title("Number of targets visible: " + str(num_targs_seen) + "   Timestep: " + str(timestep))
         if masked == True:
             self.ax.set_title("MASKED!")
-        clr_list = ['r', 'b', 'g', 'm']
+        clr_list = ['r', 'b', 'g', 'm', 'y']
 
         for robot in robots:
             pose = robot.getState()

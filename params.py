@@ -27,6 +27,7 @@ class Parameters:
             planner_config = node['plannerConfig']
             self.samp = node['samp']
             self.Tmax = node['Tmax']
+            self.random_seed = node['random_seed']
             self.map_min = node['map_min']
             self.map_max = node['map_max']
             self.gate_level = node['gate_level']
