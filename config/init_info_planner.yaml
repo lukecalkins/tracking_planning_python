@@ -1,6 +1,6 @@
 ---
 Robots:
-- initial_state: [0, -750, 1.57080]   # pi/2 = 1.57080
+- initial_state: [0, -750, -1.57080]   # pi/2 = 1.57080
   sensorConfig: config/sensors/bearing.yaml
   dynamicsConfig: config/dynamics/dubins_car.yaml
 
@@ -10,7 +10,7 @@ plannerConfig: config/planner.yaml
 
 Tmax: 80
 samp: 1.0
-random_seed: 1
+random_seed: 10
 map_min: [-1000, -1000]
 map_max: [1000, 1000]
 

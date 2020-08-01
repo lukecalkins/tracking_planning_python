@@ -80,11 +80,11 @@ class JPDAF:
         z_predict = info_target.z_predict
         for i in range(len(measurements)):
             if prob_mat_column[i] != 0:
-                innovation = measurements[i].getZ() - z_predict
-                weighted_innovation_outer_product += prob_mat_column[i] * (innovation @ innovation.transpose())
+                innovation = restrict_angle(measurements[i].getZ() - z_predict)
+                weighted_innovation_outer_product += prob_mat_column[i] * (innovation @ innovation.T)
 
         W_k = info_target.filter_gain_matrix
-        P_k = W_k @ (weighted_innovation_outer_product - weighted_innovation @ weighted_innovation.transpose()) @ W_k.transpose()
+        P_k = W_k @ (weighted_innovation_outer_product - weighted_innovation @ weighted_innovation.T) @ W_k.T
 
         return P_k
 
@@ -101,13 +101,13 @@ class JPDAF:
         z_predict = info_target.z_predict
         for i in range(prob_mat_column.shape[0] - 1):   # subtract 1 becaus last row is beta_0^t
             if prob_mat_column[i] != 0:
-                weighted_innovation += prob_mat_column[i] * (measurements[i].getZ() - z_predict)
+                weighted_innovation += prob_mat_column[i] * (restrict_angle(measurements[i].getZ() - z_predict))
 
         return weighted_innovation
 
     def get_association_probabilities(self, prob_mat, event_matrices, event_probabilities):
         """
-        functiont that takes the full probability matrix as reference and each even matrix and
+        functiont that takes the full probability matrix as reference and each event matrix and
         its corresponding probability and gets the association probability for each measurement to
         each target
         :param prob_mat: reference to probablilty matrix (num_meas X num_targets + 1)
@@ -191,7 +191,7 @@ class JPDAF:
         info_target = robot.tmm.targets[target_ndx]
 
         #this info target already has a predicted mean and innovation covariance stored from gating measurements
-        innovation = measurement.getZ() - info_target.z_predict
+        innovation = restrict_angle(measurement.getZ() - info_target.z_predict)
         return self.gaussian_likelihood(innovation, info_target.innovation_cov)
 
     def gaussian_likelihood(self, innovation, cov):
@@ -257,10 +257,16 @@ class JPDAF:
         """
 
         delta = target.gate_volume / 2
-        if np.abs(measurement.getZ() - target.z_predict) > delta:
-            return 0  # measurement outside gate
+        gate_min = restrict_angle(target.z_predict - delta)
+        gate_max = restrict_angle(target.z_predict + delta)
+        if gate_max < gate_min:  # gate is wrapped
+            return gateMeasurement_wrapped_gate(measurement.getZ(), target.z_predict, delta)
         else:
-            return 1
+            if np.abs(restrict_angle(measurement.getZ() - target.z_predict)) > delta:
+                return 0  # measurement outside gate
+            else:
+                return 1
+
 
     def generate_association_events(self, Omega):
         """
@@ -888,122 +894,34 @@ class GraphDataAssociation:
                 valid_event_mats.append(event_mat_list[i])
 
         self.data_associations = valid_event_mats
-'''
-class Graph:
 
-    def __init__(self, n_vertices, edges, feasible_edges):
-        self.n_vertices = n_vertices
-        self.edges = edges
-        self.feasible_edges = feasible_edges
-        self.adjacency = self.build_adjacency()
-        self.non_edges = [edge for edge in feasible_edges if edge not in edges]
-        self.edge_multipliers = []
-        self.edge_multipliers_sign = []
-        self.resolution_update_D_matrices = []
+#########################
+# end data JPDAF_merged #
+#########################
 
-
-    def build_resolution_update_D_matrices(self):
-        """
-        function that takes each product of P_u terms in the resolution update and contructs the associated D matrix
-        that is used in the single step resolution update for that term.
-        :return:
-        """
-        for edge_set in self.edge_multipliers:
-            G = np.zeros((self.n_vertices, self.n_vertices))
-            for edge in edge_set:
-                pi_i_j = get_pi_i_j(edge, self.n_vertices)
-                G = G + pi_i_j @ pi_i_j.transpose()
-            D = sqrtm(G)
-            self.resolution_update_D_matrices.append(np.real(D))
-
-    def build_resolution_update_multipliers(self):
-
-        num_resolved = len(self.non_edges)
-        num_unresolved = len(self.edges)
-        edge_multipliers = []
-        edge_multipliers_sign = []
-        for i in range(num_resolved + 1):
-            edge_list = list(IT.combinations(self.non_edges, i))
-            for edge_set in edge_list:
-                edge_multipliers.append(list(edge_set))
-                if len(edge_set) % 2 == 0:
-                    edge_multipliers_sign.append(1)
-                else:
-                    edge_multipliers_sign.append(-1)
-        if num_unresolved > 0:
-            for edge_set in edge_multipliers:
-                for connected_edge in self.edges:
-                    edge_set.append(connected_edge)
-
-        self.edge_multipliers = edge_multipliers
-        self.edge_multipliers_sign = edge_multipliers_sign
-
-    def build_adjacency(self):
-        adjacency = np.zeros((self.n_vertices, self.n_vertices))
-        for edge in self.edges:
-            adjacency[edge[0], edge[1]] = 1
-            adjacency[edge[1], edge[0]] = 1
-        return adjacency
-
-    def is_connected(self, targ_index):
-        """
-        returns true if target is connected to any other target in the graph
-        :param targ_index:
-        :return:
-        """
-        if self.adjacency[targ_index, :].sum() > 0:
-            return True
-        else:
-            return False
-
-    def get_connected_targets(self, targ_index):
-        """
-        function that takes a target index (starting at zero and produces a list of target indices that are connected
-        to it
-        :param targ_index:
-        :return:
-        """
-        row = self.adjacency[targ_index, :]
-        visited = {targ_index}
-        connected = {targ_index}
-        for connected_targ in list(row.nonzero()[0]):  # return as a tuple of length 1
-            connected.add(int(connected_targ))
-
-        while visited != connected:
-            for targ in connected:
-                if targ not in visited:
-                    row = self.adjacency[targ, :]
-                    for connected_targ in list(row.nonzero()[0]):
-                        if connected_targ not in connected:
-                            connected.add(connected_targ)
-                    visited.add(targ)
-                    break
-
-        # only want to return connected indices, not the one target itself
-        connected.remove(targ_index)
-
-        connected_list = list(connected)
-        correct_target_index_for_Omega = [targ + 1 for targ in connected_list]
-
-        return correct_target_index_for_Omega
-
-##############################################
-############## End Graph #####################
-##############################################
-
-def get_pi_i_j(edge_pair, n):
+def gateMeasurement_wrapped_gate(meas, z_predict, delta):
     """
-    returns pi_i_j vector from svennson2012multitarget
-    :param edge_pair:
-    :param n:
+    Determined  whether measurement falls within wrapped gate or not.
+    :param meas: scalar value of meas
+    :param z_predict: given as 2D array
+    :param delta: half width of
     :return:
     """
-    pi_i_j = np.zeros((n, 1))
-    for i in range(n):
-        pi_i_j[i] = kron_delta(i, edge_pair[0]) - kron_delta(i, edge_pair[1])
+    if z_predict > 0:
+        gate_min = z_predict - delta
+        gate_max = z_predict + delta
+        updated_meas = restrict_angle(meas, 0, 2 * np.pi)
+        if np.abs(updated_meas - z_predict) > delta:
+            return 0
+        else:
+            return 1
+    else:
+        updated_meas = restrict_angle(meas, -2 * np.pi, 0)
+        if np.abs(updated_meas - z_predict) > delta:
+            return 0
+        else:
+            return 1
 
-    return pi_i_j
-'''
 def get_bearings(robot, beliefs):
     """
     takes target beliefs and returns list of bearings to each target belief state

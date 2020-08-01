@@ -6,7 +6,7 @@ y0: # initial states of targets
   - [-750, 600, 20, -10]
   - [750, -100, -20, 10]
 #  - [750, 600, -20, -10]
- # - [-750, -150, 0, 0]
+#  - [-750, -150, 0, 0]
 
 cov_pos: 10000  # prior covariance in each
 cov_vel: 25

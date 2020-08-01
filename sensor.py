@@ -231,7 +231,8 @@ class BearingSensor(Sensor):
     def sense(self, x, target):
         y = target.getPosition()
         z = restrict_angle(np.arctan2(y[1] - x[1], y[0] - x[0]) - x[2])
-        z += np.random.normal(0, self._b_sigma)
+        noise = np.random.normal(0, self._b_sigma)
+        z = restrict_angle(z + noise)
 
         #make z a np.array for further procerring down the road in Kalman Filtering
         return Measurement(np.array([z]), target.getID(), 1)
