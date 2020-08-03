@@ -3,10 +3,10 @@ import numpy as np
 from utils import restrict_angle, kron_delta
 from sensor import Measurement
 from kalmanFilter import GaussianBelief, KalmanFilterMeasurementUpdate
-from scipy.stats import poisson, multivariate_normal
+from scipy.stats import poisson, multivariate_normal, norm
 from scipy.linalg import sqrtm
 from math import factorial
-from graph import Graph
+from graph import Graph, get_pi_i_j
 
 sqrt = np.sqrt
 
@@ -348,10 +348,12 @@ class JPDAF:
 
 class JPDAFMerged:
 
-    def __init__(self, sensor, unresolved_resolution, clutter_density, gate_level=0.99, FOV=2*np.pi, verbose=False):
+    def __init__(self, sensor, unresolved_resolution, clutter_density, sequential_resolution_update_flag,
+                 gate_level=0.99, FOV=2*np.pi, verbose=False):
         self.sensor = sensor
         self.bearing_res = unresolved_resolution
         self._clutter_density = clutter_density
+        self.sequential_resolution_update_flag = sequential_resolution_update_flag
         self._gate_level = gate_level
         self._verbose = verbose
         self._FOV = FOV  # sensor field of view in radians
@@ -397,7 +399,10 @@ class JPDAFMerged:
             gda.calculate_association_probabilities(self._clutter_density, self._FOV, self.sensor._detection_prob)
             gda.build_C_k_matrices()
             gda.perform_measurement_update_one_step(full_belief, H_tilde, b_sigma, measurements, z_target_predict, self._FOV)
-            gda.perform_resolution_update_one_step(H_tilde, self.bearing_res, z_target_predict)
+            if self.sequential_resolution_update_flag  == 1:
+                gda.perform_resolution_update_sequential(H_tilde, self.bearing_res, z_target_predict)
+            else:
+                gda.perform_resolution_update_one_step(H_tilde, self.bearing_res, z_target_predict)
 
         # Weights and gaussian beliefs calculated for all graphs, data associations and resolutions updates
         # Now perform moment matching on entire gaussian mixture.
@@ -419,7 +424,7 @@ class JPDAFMerged:
         # calculate normalizing constant
         all_probabilities_list = []
         for gda in graph_data_association_list:
-            all_probabilities_list = all_probabilities_list +  gda.resolution_updated_probabilities
+            all_probabilities_list = all_probabilities_list + gda.resolution_updated_probabilities
         all_probabilities_as_array = np.array(all_probabilities_list)
         normalizing_constant = all_probabilities_as_array.sum()
 
@@ -660,9 +665,9 @@ class JPDAFMerged:
 
         return Omega
 
-########################
+###############################
 ###### end JPDAF_merged #######
-########################
+###############################
 
 class GraphDataAssociation:
 
@@ -685,7 +690,39 @@ class GraphDataAssociation:
         :param z_target_predict:
         :return:
         """
+        R_u = bearing_res ** 2
+        N_targets = self.graph.n_vertices
 
+        association_index = 0
+        for meas_update in self.measurement_updated_beliefs:
+            mean = meas_update._mean
+            cov = meas_update._cov
+            y_dim = mean.shape[0]//N_targets
+            edge_list_index = 0
+            for edge_list in self.graph.edge_multipliers:
+                if not edge_list:
+                    self.resolution_updated_beliefs.append(meas_update)
+                    self.resolution_updated_probabilities.append(self.measurement_updated_probabilities[association_index])
+                    edge_list_index += 1
+                    continue
+                update_sign = self.graph.edge_multipliers_sign[edge_list_index]
+                running_prob = 1
+                running_mean = mean
+                running_cov = cov
+                for edge in edge_list:
+                    pi_i_j = get_pi_i_j(edge, self.graph.n_vertices).T
+                    pi_H = pi_i_j @ H_tilde
+                    innovation = 0 - restrict_angle(pi_i_j @ z_target_predict)
+                    inn_cov = pi_H @ running_cov @ pi_H.T + R_u
+                    gain = running_cov @ pi_H.T @  np.linalg.inv(inn_cov)
+                    running_mean = running_mean + gain @ innovation                 # todo: check with wierd python references
+                    running_cov = (np.eye(N_targets * y_dim) - gain @ pi_H) @ running_cov
+                    running_prob = running_prob * np.sqrt(2 * np.pi * R_u) * norm.pdf(0, restrict_angle(pi_i_j @ z_target_predict), inn_cov)[0][0]
+                self.resolution_updated_beliefs.append(GaussianBelief(running_mean, running_cov))
+                self.resolution_updated_probabilities.append(update_sign * running_prob *
+                                                             self.measurement_updated_probabilities[association_index])
+                edge_list_index += 1
+            association_index += 1
 
     def perform_resolution_update_one_step(self, H_tilde, bearing_res, z_target_predict):
         """

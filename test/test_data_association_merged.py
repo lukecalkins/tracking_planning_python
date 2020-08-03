@@ -44,23 +44,25 @@ JPDAF = p.getEstimator()
 target_model = p.getWorld()
 
 gate_level = 0.99
-JPDAF_merged = DA.JPDAFMerged(robots[0].sensor, p.unresolved_resolution, p.clutter_density, gate_level)
+JPDAF_merged = DA.JPDAFMerged(robots[0].sensor, p.unresolved_resolution, p.clutter_density, p.sequential_resolution_update_flag,
+                              p.gate_level,
+                              )
 
 np.random.seed(p.random_seed)
 
 for kk in range(p.Tmax):
 
     for i in range(len(robots)):
-        measurements, num_targets_seen = robots[0].sensor.senseTargets(robots[0].getState(), target_model.getTargets())
+        #measurements, num_targets_seen = robots[0].sensor.senseTargets(robots[0].getState(), target_model.getTargets())
         #measurements, num_targets_seen = robots[i].sensor.senseTargets_interference_n(robots[i].getState(), target_model.getTargets(), p.masking_proximity)
         #measurements, num_targets_seen = robots[i].sensor.senseTargets_resolution_model_2(robots[i].getState(), target_model.getTargets(), p.unresolved_resolution)
-        #measurements, num_targets_seen = robots[i].sensor.senseTargets_resolution_model_n(robots[i].getState(), target_model.getTargets(), p.unresolved_resolution)
+        measurements, num_targets_seen = robots[i].sensor.senseTargets_resolution_model_n(robots[i].getState(), target_model.getTargets(), p.unresolved_resolution)
         add_clutter(measurements, p.clutter_density)
 
-        JPDAF.filter(measurements, robots[i])
+        #JPDAF.filter(measurements, robots[i])
 
-        #filter_output = JPDAF_merged.filter(measurements, robots[i])
-        #robots[i].tmm.updateBelief(filter_output)
+        filter_output = JPDAF_merged.filter(measurements, robots[i])
+        robots[i].tmm.updateBelief(filter_output)
 
     target_model.forwardSimulate()
     plotter.plot_state(robots, target_model.getTargets(), num_targs_seen=num_targets_seen,
@@ -69,7 +71,7 @@ for kk in range(p.Tmax):
 
     print("Timstep: ", kk)
 
-file_name = 'JPDAF/merged/3_targ/3_targ_fully_resolved_JPDAF_wrapped_gate'
+file_name = 'JPDAF/merged/3_targ/3_targ_resolution_10_sequential'
 file_name = file_name + '_seed_' + str(p.random_seed)
 plotter.save_video(filename=file_name, fps=5)
 

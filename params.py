@@ -35,11 +35,15 @@ class Parameters:
             self.horizon = node['horizon']
             self.clutter_density = node['clutter_density']
             self.estimator_verbose = node['estimator_verbose']
+            self.sequential_resolution_update_flag = node['sequential_resolution_update_flag']
 
             self.robots = self.buildRobots(yaml_file)
             self.world = self.buildTMM(target_config)
             self.planner = self.buildPlanner(planner_config)
             self.estimator = self.buildEstimator()
+
+    #def write_params_to_file(self, dir):
+
 
     def getRobots(self):
         return self.robots

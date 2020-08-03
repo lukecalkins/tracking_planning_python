@@ -1,6 +1,6 @@
 ---
 Robots:
-- initial_state: [0, -750, -1.57080]   # pi/2 = 1.57080
+- initial_state: [0, -750, 1.57080]   # pi/2 = 1.57080
   sensorConfig: config/sensors/bearing.yaml
   dynamicsConfig: config/dynamics/dubins_car.yaml
 
@@ -20,3 +20,4 @@ gate_level: 0.99
 estimator_verbose: False
 horizon: 10  # planning horizon
 n_controls: 5  # Re-planning time
+sequential_resolution_update_flag: 1  # 0 if resolution update should be done in one step
