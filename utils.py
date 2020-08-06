@@ -2,6 +2,12 @@ import math
 from copy import copy
 import numpy as np
 
+def inside_interval(value, min, max):
+
+    if min <= value <= max:
+        return True
+    else:
+        return False
 
 def kron_delta(i, j):
 
@@ -9,7 +15,6 @@ def kron_delta(i, j):
         return 1
     else:
         return 0
-
 
 def propagateOwnshipEuler(osOld, speed, turnRateCommand, dt):
     osNew = copy(osOld)

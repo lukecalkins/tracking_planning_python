@@ -48,6 +48,31 @@ class BearingSensor(Sensor):
 
         return output, len(targets)
 
+    def senseTargets_ambiguity(self, own_state, targets):
+        """
+        returns contacts in the range 0 to pi measured from the front of the sensor going in either direction
+        :param own_state:
+        :param targets:
+        :return:
+        """
+
+        output = []
+        for target in targets:
+            target_state = target.getState()
+            delta_east = target_state[0] - own_state[0]
+            delta_north = target_state[1] - own_state[1]
+            beta = np.arctan2(delta_north, delta_east)
+            aspect = unsigned_angular_difference(own_state[2], beta)
+            noise = np.random.normal(0, self._b_sigma)
+            z = aspect + noise
+            if z < 0:
+                z = -1 * z
+            elif z > np.pi:
+                z = 2 * np.pi - z
+            output.append(Measurement(np.array([z]), target.getID(), 1))
+
+        return output, len(targets)
+
     def senseTargets_interference_2(self, own_state, targets, proximity):
         """
         function that will create vector of target measurements for 2 targets only where targets close in bearing are
@@ -175,11 +200,14 @@ class BearingSensor(Sensor):
         # construct feasible edge set
         feasible_edges = []
         for i in range(n_targs - 1):
-            bearing_i = true_bearings[sorted_index[n_targs - 1]]
-            bearing_j = true_bearings[sorted_index[0]]
-            bearing_difference = bearing_i - bearing_j
-            # todo: fix case where angle is negative
-            feasible_edges.append((sorted_index[i], sorted_index[i + 1]))
+            bearing_i = true_bearings[sorted_index[i]]
+            bearing_j = true_bearings[sorted_index[i + 1]]
+            bearing_diff =  bearing_i - bearing_j
+            if n_targs > 2:
+                if bearing_diff < np.pi:
+                    feasible_edges.append((sorted_index[i], sorted_index[i + 1]))
+            else:
+                feasible_edges.append((sorted_index[i], sorted_index[i + 1]))
         if n_targs > 2:
             bearing_i = true_bearings[sorted_index[n_targs - 1]]
             bearing_j = true_bearings[sorted_index[0]]
@@ -266,6 +294,36 @@ class BearingSensor(Sensor):
         :return:
         """
         return restrict_angle(np.arctan2(y[1] - x[1], y[0] - x[0]) - x[2])
+
+    def observationModel_ambiguity(self, x, y):
+        """
+        returns positive angle in the range of 0 to pi with left-right ambiguity
+        :param x:
+        :param y:
+        :return:
+        """
+        beta = np.arctan2(y[1] - x[1], y[0] - x[0])
+        abs_difference = np.abs(x[2] - beta)
+        if abs_difference > np.pi:
+            output = 2*np.pi - abs_difference
+        else:
+            output = abs_difference
+        return output
+
+def unsigned_angular_difference(heading, beta):
+    """
+    given an ownship heading and a relative target bearing beta, this function returns the shortest unsigned
+    angular distance between 0 and pi
+    :param heading:
+    :param beta:
+    :return:
+    """
+    abs_difference = np.abs(heading - beta)
+    if abs_difference > np.pi:
+        output = 2*np.pi - abs_difference
+    else:
+        output = abs_difference
+    return output
 
 def generate_mean_bearing(bearing_array):
     """

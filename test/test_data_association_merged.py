@@ -1,6 +1,7 @@
 from utils import restrict_angle
 import numpy as np
 import dataAssociation as DA
+import dataAssociation_ambiguity as DA_amb
 from params import Parameters
 import matplotlib.pyplot as plt
 from plotting import *
@@ -45,21 +46,24 @@ target_model = p.getWorld()
 
 gate_level = 0.99
 JPDAF_merged = DA.JPDAFMerged(robots[0].sensor, p.unresolved_resolution, p.clutter_density, p.sequential_resolution_update_flag,
-                              p.gate_level,
-                              )
+                              p.gate_level)
+JPDAF_ambiguity = DA_amb.JPDAF_amb(p.detection_prob, p.clutter_density, p.gate_level)
 
 np.random.seed(p.random_seed)
 
 for kk in range(p.Tmax):
 
     for i in range(len(robots)):
-        #measurements, num_targets_seen = robots[0].sensor.senseTargets(robots[0].getState(), target_model.getTargets())
+        #measurements, num_targets_seen = robots[0].sensor.senseTargets(robots[i].getState(), target_model.getTargets())
         #measurements, num_targets_seen = robots[i].sensor.senseTargets_interference_n(robots[i].getState(), target_model.getTargets(), p.masking_proximity)
         #measurements, num_targets_seen = robots[i].sensor.senseTargets_resolution_model_2(robots[i].getState(), target_model.getTargets(), p.unresolved_resolution)
-        measurements, num_targets_seen = robots[i].sensor.senseTargets_resolution_model_n(robots[i].getState(), target_model.getTargets(), p.unresolved_resolution)
+        #measurements, num_targets_seen = robots[i].sensor.senseTargets_resolution_model_n(robots[i].getState(), target_model.getTargets(), p.unresolved_resolution)
+        measurements, num_targets_seen = robots[0].sensor.senseTargets_ambiguity(robots[i].getState(), target_model.getTargets())
         add_clutter(measurements, p.clutter_density)
 
         #JPDAF.filter(measurements, robots[i])
+
+        #JPDAF_ambiguity.filter(measurements, robots[i])
 
         filter_output = JPDAF_merged.filter(measurements, robots[i])
         robots[i].tmm.updateBelief(filter_output)
@@ -71,8 +75,10 @@ for kk in range(p.Tmax):
 
     print("Timstep: ", kk)
 
-file_name = 'JPDAF/merged/3_targ/3_targ_resolution_10_sequential'
+dir = 'JPDAF/ambiguity/2_targ/'
+file_name = dir + 'test4'
 file_name = file_name + '_seed_' + str(p.random_seed)
 plotter.save_video(filename=file_name, fps=5)
+#p.write_params_to_file(dir)
 
 

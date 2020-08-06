@@ -6,11 +6,14 @@ import dataAssociation as DA
 import dataAssociationPlan as DAP
 import planner as plan
 import cost_function as cf
+import sys
+from shutil import copyfile
 
 class Parameters:
 
     def __init__(self, yaml_file):
 
+        self.yaml_file = yaml_file
         with open(yaml_file, 'r') as file:
             node = yaml.load(file, Loader=yaml.FullLoader)
             target_config = node['targetConfig']
@@ -42,7 +45,12 @@ class Parameters:
             self.planner = self.buildPlanner(planner_config)
             self.estimator = self.buildEstimator()
 
-    #def write_params_to_file(self, dir):
+    def write_params_to_file(self, dir):
+        copyfile('config/init_info_planner.yaml', 'results/videos/' + dir + 'init_info_planner.yaml')
+        copyfile('config/planner.yaml', 'results/videos/' + dir + 'planner.yaml')
+        copyfile('config/targetModel.yaml', 'results/videos/' + dir + 'targetModel.yaml')
+        copyfile('config/map.yaml', 'results/videos/' + dir + 'map.yaml')
+        copyfile('config/sensors/bearing.yaml', 'results/videos/' + dir + 'bearing.yaml')
 
 
     def getRobots(self):
