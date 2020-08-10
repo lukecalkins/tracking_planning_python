@@ -195,14 +195,14 @@ class BearingSensor(Sensor):
         # sort the bearings
         true_bearings = np.array(true_bearings)
         true_bearings_2pi = true_bearings + np.pi
-        sorted_index = sorted(range(len(true_bearings_2pi)), key=lambda k: true_bearings_2pi[k], reverse=True)
+        sorted_index = sorted(range(len(true_bearings)), key=lambda k: true_bearings[k], reverse=True)
 
         # construct feasible edge set
         feasible_edges = []
         for i in range(n_targs - 1):
             bearing_i = true_bearings[sorted_index[i]]
             bearing_j = true_bearings[sorted_index[i + 1]]
-            bearing_diff =  bearing_i - bearing_j
+            bearing_diff = bearing_i - bearing_j
             if n_targs > 2:
                 if bearing_diff < np.pi:
                     feasible_edges.append((sorted_index[i], sorted_index[i + 1]))
@@ -219,8 +219,8 @@ class BearingSensor(Sensor):
         merged_mat = np.zeros((n_targs, n_targs))
         merged_edges = []
         for edge in feasible_edges:
-            bearing_i = true_bearings_2pi[edge[0]]
-            bearing_j = true_bearings_2pi[edge[1]]
+            bearing_i = true_bearings[edge[0]]
+            bearing_j = true_bearings[edge[1]]
             delta_bearing = np.abs(bearing_i - bearing_j)  # todo: delta changes when wrapped around in bearing
             if delta_bearing > np.pi:
                 delta_bearing = 2*np.pi - delta_bearing
@@ -239,7 +239,7 @@ class BearingSensor(Sensor):
         meas_list = []
         for i in range(n_targs):
             if i not in visited:
-                #connected_targs = np.nonzero(merged_mat[i, :])[0]
+                conn_seq = merged_graph.get_connected_edge_sequence(i)
                 connected_targs = merged_graph.get_connected_targets_raw_index(i)
                 visited.add(i)
                 num_targs_on_meas = 1
@@ -247,8 +247,13 @@ class BearingSensor(Sensor):
                     visited.add(connected_targs[k])
                     num_targs_on_meas += 1
                 targs_on_meas = np.concatenate((np.array([i]), np.array(connected_targs, dtype=int)))
-                mean_bearing = generate_mean_bearing(true_bearings_2pi[targs_on_meas])
-                mean_bearing = mean_bearing - np.pi
+                if conn_seq:
+                    if n_targs == 2: # check if connected sequence needs to be flipped  to go across boundary in correct direction
+                        if true_bearings[conn_seq[0][0]] - true_bearings[conn_seq[0][1]] > np.pi:
+                            conn_seq = [(conn_seq[0][1], conn_seq[0][0])]
+                    mean_bearing = generate_mean_bearing(true_bearings,  conn_seq)
+                else:
+                    mean_bearing = true_bearings[i]
                 noise = np.random.normal(0, num_targs_on_meas * self._b_sigma)
                 bearing_meas = Measurement(restrict_angle(mean_bearing + noise), None, 1)
                 num_targs_seen += 1
@@ -310,6 +315,7 @@ class BearingSensor(Sensor):
             output = abs_difference
         return output
 
+
 def unsigned_angular_difference(heading, beta):
     """
     given an ownship heading and a relative target bearing beta, this function returns the shortest unsigned
@@ -325,20 +331,35 @@ def unsigned_angular_difference(heading, beta):
         output = abs_difference
     return output
 
-def generate_mean_bearing(bearing_array):
+def generate_mean_bearing(bearings, conn_seq):
     """
     function that generates the mean value of bearing given that the bearing could wrap around the -pi to pi barrier.
-    :param bearing_array: np.array of bearings GIVEN IN POSITIVE VALUES 0 - 2PI
+    :param bearing_array: np.array of bearings GIVEN IN POSITIVE VALUES -PI to PI
+    :param conn_seq: sequence of edges in connected group starting from greatest bearing (unless greatest is wrapped)
     :return: bearing value
     """
-    max_bearing = bearing_array.max()
-    min_bearing = bearing_array.min()
-    if max_bearing - min_bearing < np.pi:
-        mean_bearing = bearing_array.mean()
-    else:
-        sys.exit("Bearing measurements wrapped around boundary")
 
-    return mean_bearing
+    # get target indices in correct order
+    ordered_targs = [conn_seq[0][0]]
+    mapped_bearings = []
+    for i in range(len(conn_seq)):
+        ordered_targs.append(conn_seq[i][1])
+    for i in range(len(ordered_targs)):
+        if i == 0:
+            mapped_bearings.append(bearings[ordered_targs[i]])
+            continue
+        if mapped_bearings[i-1] < 0:
+            if bearings[ordered_targs[i]] > 0:
+                mapped_bearings.append(restrict_angle(bearings[ordered_targs[i]],  -2*np.pi, 0))
+            else:
+                mapped_bearings.append(bearings[ordered_targs[i]])
+        else:
+            mapped_bearings.append(bearings[ordered_targs[i]])
+
+    # take mean of mapped bearing and map it back to -pi to pi
+    mean = restrict_angle((np.array(mapped_bearings)).mean(), -np.pi, np.pi)
+
+    return mean
 
 
 def add_clutter(measurements, density, volume = 2*np.pi):

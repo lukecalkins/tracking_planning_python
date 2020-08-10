@@ -428,6 +428,11 @@ class JPDAFMerged:
         all_probabilities_as_array = np.array(all_probabilities_list)
         normalizing_constant = all_probabilities_as_array.sum()
 
+        weights = []  # purely for debugging purposes
+        for gda in graph_data_association_list:
+            for i in range(len(gda.resolution_updated_beliefs)):
+                weights.append(gda.resolution_updated_probabilities[i] / normalizing_constant)
+
         #first update the mean
         for gda in graph_data_association_list:
             for i in range(len(gda.resolution_updated_beliefs)):
@@ -798,6 +803,8 @@ class GraphDataAssociation:
                                                                  np.ndarray.flatten(self.C_k_list[i] @ z_target_predict), V)
                 self.measurement_updated_probabilities.append(measurement_likelihood * 1./(FOV ** num_clutter_meas) *
                                                               self.association_probabilities[i])
+            if False:
+                H_caron_adde
 
     def build_measurement_covariance_merged(self, b_sigma, num_target_per_meas):
         """
@@ -1021,6 +1028,3 @@ def add_masked_measurements_2targ(measurements, robot, proximity):
         max_ndx = np.argmax(target_dist)
         measurements.append(Measurement(target_bearing[max_ndx], 0, 1))  # todo: do we need actual infered ID of target?
         print("adding artificial measurement")
-
-
-

@@ -36,7 +36,7 @@ if False:
 map_min = p.map_min
 map_max = p.map_max
 title = "Kalman Filter test"
-plotter = StatePlotter(map_min, map_max, title, video=True, track_stats_flag=False)
+plotter = StatePlotter(map_min, map_max, title, video=True, track_stats_flag=False, meas_plot_flag=True)
 
 
 robots = p.getRobots()
@@ -57,8 +57,8 @@ for kk in range(p.Tmax):
         #measurements, num_targets_seen = robots[0].sensor.senseTargets(robots[i].getState(), target_model.getTargets())
         #measurements, num_targets_seen = robots[i].sensor.senseTargets_interference_n(robots[i].getState(), target_model.getTargets(), p.masking_proximity)
         #measurements, num_targets_seen = robots[i].sensor.senseTargets_resolution_model_2(robots[i].getState(), target_model.getTargets(), p.unresolved_resolution)
-        #measurements, num_targets_seen = robots[i].sensor.senseTargets_resolution_model_n(robots[i].getState(), target_model.getTargets(), p.unresolved_resolution)
-        measurements, num_targets_seen = robots[0].sensor.senseTargets_ambiguity(robots[i].getState(), target_model.getTargets())
+        measurements, num_targets_seen = robots[i].sensor.senseTargets_resolution_model_n(robots[i].getState(), target_model.getTargets(), p.unresolved_resolution)
+        #measurements, num_targets_seen = robots[0].sensor.senseTargets_ambiguity(robots[i].getState(), target_model.getTargets())
         add_clutter(measurements, p.clutter_density)
 
         #JPDAF.filter(measurements, robots[i])
@@ -69,14 +69,14 @@ for kk in range(p.Tmax):
         robots[i].tmm.updateBelief(filter_output)
 
     target_model.forwardSimulate()
-    plotter.plot_state(robots, target_model.getTargets(), num_targs_seen=num_targets_seen,
+    plotter.plot_state(robots, target_model.getTargets(), measurements, num_targs_seen=num_targets_seen,
                        robot_size=50, target_size=10, timestep=kk)
     plt.pause(0.1)
 
     print("Timstep: ", kk)
 
-dir = 'JPDAF/ambiguity/2_targ/'
-file_name = dir + 'test4'
+dir = 'JPDAF/merged/2_targ/'
+file_name = dir + 'aft_2'
 file_name = file_name + '_seed_' + str(p.random_seed)
 plotter.save_video(filename=file_name, fps=5)
 #p.write_params_to_file(dir)

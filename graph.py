@@ -2,6 +2,7 @@ from scipy.linalg import sqrtm
 import numpy as np
 from utils import restrict_angle, kron_delta
 import itertools as IT
+from collections import deque
 
 class Graph:
 
@@ -15,6 +16,34 @@ class Graph:
         self.edge_multipliers_sign = []
         self.resolution_update_D_matrices = []
 
+    def get_connected_edge_sequence(self, target_index):
+        """
+        returns sequence of edges starting with an open ended target that contains the target index
+        :param target_index:
+        :return:
+        """
+        sequence = []
+        connected_targs = self.get_connected_targets_raw_index(target_index)
+        connected_targs.append(target_index)
+        targs_set = set(connected_targs)
+        for edge in self.edges:
+            targ_i = edge[0]
+            targ_j = edge[1]
+            if targ_i in targs_set or targ_j in targs_set:
+                sequence.append(edge)
+
+        # shuffle sequence order so that it runs in clockwise
+
+        if sequence:
+            edge_counter_list = []
+            for edge in sequence:
+                edge_counter_list += list(edge)
+            sequence = deque(sequence)
+            while edge_counter_list.count(sequence[0][0]) != 1:
+                sequence.rotate(1)
+            sequence = list(sequence)
+
+        return sequence
 
     def build_resolution_update_D_matrices(self):
         """

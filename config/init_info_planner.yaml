@@ -1,6 +1,6 @@
 ---
 Robots:
-- initial_state: [0, 0, 1.57080]   # pi/2 = 1.57080
+- initial_state: [0, 0, -1.57080]   # pi/2 = 1.57080
   sensorConfig: config/sensors/bearing.yaml
   dynamicsConfig: config/dynamics/dubins_car.yaml
 

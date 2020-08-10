@@ -22,13 +22,14 @@ if __name__ == '__main__':
     title = "Kalman Filter test"
     plotter = StatePlotter(map_min, map_max, title, video=True, track_stats_flag=True)
 
-    np.random.seed(42)
     planner_output = []  # only utilized when not running planner
 
     robots = p.getRobots()
     planner = p.getPlanner()
     target_model = p.getWorld()
     JPDAF = p.getEstimator()
+
+    np.random.seed(p.random_seed)
 
     # Main Loop
     for kk in range(p.Tmax):

@@ -24,7 +24,7 @@ from utils import *
 
 class StatePlotter:
 
-    def __init__(self, mapmin, mapmax, title, plotNum=1, video=False, track_stats_flag=False):
+    def __init__(self, mapmin, mapmax, title, plotNum=1, video=False, track_stats_flag=False, meas_plot_flag=False):
 
         self.fig = plt.figure(plotNum, figsize=(7,5))
         self.mapmin = mapmin
@@ -36,6 +36,7 @@ class StatePlotter:
         if self.track_stats:
             self.MSE_list = []
             self.log_det_Sigma_list = []
+        self.meas_plot_flag = meas_plot_flag
         plt.ion()
 
     def draw_env(self):
@@ -44,6 +45,9 @@ class StatePlotter:
             self.ax = self.fig.add_subplot(121)
             self.ax_MSE = self.fig.add_subplot(222)
             self.ax_log_det_sig = self.fig.add_subplot(224)
+        elif self.meas_plot_flag:
+            self.ax = self.fig.add_subplot(121)
+            self.ax_meas = self.fig.add_subplot(122)
         else:
             self.ax = self.fig.subplots()
 
@@ -126,9 +130,17 @@ class StatePlotter:
         self.ax_log_det_sig.set_title('Log(det($\Sigma$))')
         plt.tight_layout()
 
+    def draw_measurements(self, measurements):
 
+        bearings = np.linspace(0, 2 * np.pi, num=100)
+        points_x = np.cos(bearings)
+        points_y = np.sin(bearings)
+        self.ax_meas.plot(points_x, points_y)
+        for meas in measurements:
+            value = meas.getZ()
+            self.ax_meas.plot(np.cos(value), np.sin(value), c='r', marker='x', markersize=10)
 
-    def plot_state(self, robots, targets, planner_output = None, num_targs_seen = None, masked = False, robot_size=1, target_size=1, timestep=None):
+    def plot_state(self, robots, targets, measurements = None, planner_output = None, num_targs_seen = None, masked = False, robot_size=1, target_size=1, timestep=None):
 
         self.clear_plot()
         self.draw_env()
@@ -158,6 +170,9 @@ class StatePlotter:
 
         if self.track_stats:
             self.draw_mse_lds_curves(robots, targets)
+
+        if self.meas_plot_flag:
+            self.draw_measurements(measurements)
 
         plt.draw()
         if self.video:
