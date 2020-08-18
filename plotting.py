@@ -24,9 +24,10 @@ from utils import *
 
 class StatePlotter:
 
-    def __init__(self, mapmin, mapmax, title, plotNum=1, video=False, track_stats_flag=False, meas_plot_flag=False):
+    def __init__(self, mapmin, mapmax, title, plotNum=1, video=False, track_stats_flag=False, meas_plot_flag=False,
+                 FOV_flag=False, plan_plot_flag=False):
 
-        self.fig = plt.figure(plotNum, figsize=(7,5))
+        self.fig = plt.figure(plotNum, figsize=(8, 8))
         self.mapmin = mapmin
         self.mapmax = mapmax
         self.title = title
@@ -37,6 +38,8 @@ class StatePlotter:
             self.MSE_list = []
             self.log_det_Sigma_list = []
         self.meas_plot_flag = meas_plot_flag
+        self.FOV_flag = FOV_flag
+        self.plan_plot_flag = plan_plot_flag
         plt.ion()
 
     def draw_env(self):
@@ -46,13 +49,21 @@ class StatePlotter:
             self.ax_MSE = self.fig.add_subplot(222)
             self.ax_log_det_sig = self.fig.add_subplot(224)
         elif self.meas_plot_flag:
-            self.ax = self.fig.add_subplot(121)
-            self.ax_meas = self.fig.add_subplot(122)
+            if self.plan_plot_flag:
+                self.ax = self.fig.add_subplot(221)
+                self.ax_meas = self.fig.add_subplot(222)
+                self.ax_plan = self.fig.add_subplot(223)
+            else:
+                self.ax = self.fig.add_subplot(121)
+                self.ax_meas = self.fig.add_subplot(122)
         else:
             self.ax = self.fig.subplots()
 
         self.ax.set_xlim(self.mapmin[0], self.mapmax[0])
         self.ax.set_ylim(self.mapmin[1], self.mapmax[1])
+        if self.plan_plot_flag:
+            self.ax_plan.set_xlim(self.mapmin[0], self.mapmax[0])
+            self.ax_plan.set_ylim(self.mapmin[1], self.mapmax[1])
         self.ax.set_xlabel('Distance (m)')
 
         #return self.ax
@@ -64,7 +75,7 @@ class StatePlotter:
         """
         return self.fig.clf()
 
-    def draw_robot(self, pose, clr='b', size=1):
+    def draw_robot(self, pose, clr='b', size=1, ax=None):
 
         x = pose[0]
         y = pose[1]
@@ -76,16 +87,48 @@ class StatePlotter:
         # Construct Triangle Polygon.
         XY = np.array([[x + size * np.cos(th), x + size * np.cos(th - 2.7), x + size * np.cos(th + 2.7)],
                        [y + size * np.sin(th), y + size * np.sin(th - 2.7), y + size * np.sin(th + 2.7)]]).transpose()
-        return self.ax.add_patch(patches.Polygon(XY, facecolor=clr, zorder=2, alpha=0.5))
 
-    def draw_target(self, state, clr = 'r', size = 1):
+        if ax:
+            return ax.add_patch(patches.Polygon(XY, facecolor=clr, zorder=2, alpha=0.5))
+        else:
+            return self.ax.add_patch(patches.Polygon(XY, facecolor=clr, zorder=2, alpha=0.5))
+
+    def draw_fov(self, pose, sense_range, fov, clr='c'):
+
+        x = pose[0]
+        y = pose[1]
+        th = pose[2]
+        # convert theta to degrees
+        th_deg = 180/np.pi * th
+        #create port wedge
+        theta1 = th_deg + 90 - fov/2
+        theta2 = th_deg + 90 + fov/2
+        self.ax.add_patch(patches.Wedge((x, y), sense_range, theta1, theta2,
+                                               fill=False,
+                                               edgecolor='b',
+                                               linewidth=1.5,
+                                               linestyle='--',
+                                               facecolor=clr,
+                                               alpha=.4, zorder=3))
+        #create starboard wedge
+        theta1 = th_deg - 90 - fov / 2
+        theta2 = th_deg - 90 + fov / 2
+        self.ax.add_patch(patches.Wedge((x, y), sense_range, theta1, theta2,
+                                        fill=False,
+                                        edgecolor='b',
+                                        linewidth=1.5,
+                                        linestyle='--',
+                                        facecolor=clr,
+                                        alpha=.4, zorder=3))
+
+    def draw_target(self, state, clr='r', size=1):
 
         x = state[0]
         y = state[1]
 
         self.ax.plot(x, y, clr, marker='o', markersize=size)
 
-    def draw_cov(self, mean, cov, confidence, clr='r'):
+    def draw_cov(self, mean, cov, confidence, clr='r', ax=None):
         #manual entries for plotter checking
         #cov = np.array([[225, 0], [0, 225]])
         #mean = np.array([50, 50])
@@ -98,7 +141,10 @@ class StatePlotter:
         Q = np.matmul(V, D)
         a = np.matmul(Q, np.array([np.cos(t), np.sin(t)]))
         b = 1
-        self.ax.plot(a[0, :] + mean[0], a[1, :] + mean[1], clr)
+        if ax:
+            ax.plot(a[0, :] + mean[0], a[1, :] + mean[1], clr)
+        else:
+            self.ax.plot(a[0, :] + mean[0], a[1, :] + mean[1], clr)
 
     def draw_planned_path(self, pose, planner_output):
         pos_x = [pose[0]]
@@ -130,7 +176,7 @@ class StatePlotter:
         self.ax_log_det_sig.set_title('Log(det($\Sigma$))')
         plt.tight_layout()
 
-    def draw_measurements(self, measurements):
+    def draw_measurements(self, measurements, size=0.1, clr='b'):
 
         bearings = np.linspace(0, 2 * np.pi, num=100)
         points_x = np.cos(bearings)
@@ -140,7 +186,35 @@ class StatePlotter:
             value = meas.getZ()
             self.ax_meas.plot(np.cos(value), np.sin(value), c='r', marker='x', markersize=10)
 
-    def plot_state(self, robots, targets, measurements = None, planner_output = None, num_targs_seen = None, masked = False, robot_size=1, target_size=1, timestep=None):
+        # position robot at [0,0,0] for
+        pose = np.array([0, 0, 0])
+        x = pose[0]
+        y = pose[1]
+        th = pose[2]
+        XY = np.array([[x + size * np.cos(th), x + size * np.cos(th - 2.7), x + size * np.cos(th + 2.7)],
+                       [y + size * np.sin(th), y + size * np.sin(th - 2.7), y + size * np.sin(th + 2.7)]]).transpose()
+        return self.ax_meas.add_patch(patches.Polygon(XY, facecolor=clr, zorder=2, alpha=0.5))
+
+    def draw_planner_belief(self, plan_node, clr_list=None, size=1):
+
+        pose = plan_node.state.state
+        self.draw_robot(pose, size=size, ax=self.ax_plan)
+        y_dim = plan_node.state.y_dim
+        num_targs = plan_node.state.targ_state[0].shape[0] // y_dim
+        for i in range(num_targs):
+            targ_state = plan_node.state.targ_state_at_node
+            start = i * y_dim
+            stop = start + y_dim
+            mean = targ_state[start: start + 2]
+            cov = plan_node.state.Sigma[start:stop, start:stop]
+            cov = cov[:2, :2]
+            self.draw_cov(mean, cov, confidence=0.99, clr=clr_list[i], ax=self.ax_plan)
+
+
+
+
+    def plot_state(self, robots, targets, measurements=None, planner_output=None, num_targs_seen=None, masked=False,
+                   robot_size=1, target_size=1, timestep=None, fov=None, max_range=None, plan_node=None):
 
         self.clear_plot()
         self.draw_env()
@@ -152,8 +226,12 @@ class StatePlotter:
         for robot in robots:
             pose = robot.getState()
             self.draw_robot(pose, size=robot_size)
+            if self.FOV_flag:
+                self.draw_fov(pose, max_range, fov)
             if planner_output != None:
                 self.draw_planned_path(pose, planner_output)
+            if self.plan_plot_flag:
+                self.draw_planner_belief(plan_node, clr_list, size=robot_size)
 
             info_ndx = 0
             for target in robot.tmm.targets:
@@ -161,6 +239,9 @@ class StatePlotter:
                 cov = target.getCovariance()[:2, :2]
                 self.draw_cov(mean, cov, confidence=0.99, clr=clr_list[info_ndx])
                 info_ndx += 1
+
+            if self.meas_plot_flag:
+                self.draw_measurements(measurements)
 
         target_ndx = 0
         for target in targets:
@@ -171,10 +252,10 @@ class StatePlotter:
         if self.track_stats:
             self.draw_mse_lds_curves(robots, targets)
 
-        if self.meas_plot_flag:
-            self.draw_measurements(measurements)
+
 
         plt.draw()
+        #plt.tight_layout()
         if self.video:
             self.fig.canvas.draw()
             image = np.frombuffer(self.fig.canvas.tostring_rgb(), dtype='uint8')

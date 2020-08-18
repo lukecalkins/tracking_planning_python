@@ -7,6 +7,7 @@ from cost_function import *
 import sys
 from sensor import Measurement
 import json
+import copy
 
 """
 class Search_Node:
@@ -19,13 +20,14 @@ class Search_Node:
 """
 
 class SearchNode(Node):
-    def __init__(self, state, robot, cost_func, JPDA_sim=None, parent=None, action=None):
+    def __init__(self, state, robot, cost_func, JPDA_sim=None, JPDAM_sim=None, parent=None, action=None):
         Node.__init__(self, action, parent)
         self.state = state
         self.robot = robot
         self.cost_func = cost_func
         self.action = action
         self.JPDA_sim = JPDA_sim
+        self.JPDAM_sim = JPDAM_sim
 
     def make_children(self, actions, filter_type):
         for action in actions:
@@ -34,48 +36,82 @@ class SearchNode(Node):
                     self._make_child_kalman(action)
                 elif filter_type == 'JPDAF':
                     self._make_child_JPDAF(action)
+                elif filter_type == 'JPDAF_merged':
+                    self._make_child_JPDAF_merged(action)
                 else:
                     print("filter type not recognized in SearchNode.make_children")
                     exit()
 
     def _make_child_kalman(self, action):
-        child = SearchNode(deepcopy(self.state), self.robot, self.cost_func, self.JPDA_sim, self, action)
+        child = SearchNode(deepcopy(self.state), self.robot, self.cost_func, JPDA_sim=self.JPDA_sim,
+                           parent=self, action=action)
         child.state.move(action)
-        child.state.inn_cov = []  # reset inn cov to empty
+        #child.state.inn_cov = []  # reset inn cov to empty
         child.state.filter_cov(self.robot, child.depth)
         child.state.total_cost = self.state.total_cost + child.state.get_cost(self.cost_func, child.depth)
 
         return child  # caller doesn't actually store it
 
     def _make_child_JPDAF(self, action):
-        child = SearchNode(deepcopy(self.state), self.robot, self.cost_func, self.JPDA_sim, self, action)
+        child = SearchNode(deepcopy(self.state), self.robot, self.cost_func, JPDA_sim=self.JPDA_sim,
+                           parent=self, action=action)
         child.state.move(action)
-        child.state.inn_cov = []  # reset inn cov to empty
+        #child.state.inn_cov = []  # reset inn cov to empty
         child.state.filter_cov_JPDA(self.robot, child.depth, self.JPDA_sim)
         child.state.total_cost = self.state.total_cost + child.state.get_cost(self.cost_func, child.depth)
 
         return child  # caller doesn't actually store it
+
+    def _make_child_JPDAF_merged(self, action):
+        child = SearchNode(deepcopy(self.state), self.robot, self.cost_func, JPDAM_sim=self.JPDAM_sim,
+                           parent=self, action=action)
+        child.state.move(action)
+        child.state.filter_cov_JPDAM(self.robot, child.depth, self.JPDAM_sim)
+        child.state.total_cost = self.state.total_cost + child.state.get_cost(self.cost_func, child.depth)
+
+        return child  # caller doesn't actually store it.
 
 class SearchState:
     def __init__(self, state, Sigma, y, dt):
         self.state = state  # Auv state
         self.Sigma = Sigma  # Target system covariance
         self.targ_state = y
+        self.targ_state_at_node = []
         self.y_dim = 4  # todo: make this automatic
         self.z_dim = 1
         self.dt = dt
-        self.inn_cov = []
+        #self.inn_cov = []
         self.total_cost = 0
         self.node_cost = 0
 
     def move(self, action):
         self.state = propagateOwnshipEuler(self.state, action[0], action[1], self.dt)
 
+    def filter_cov_JPDA_merged(self, robot, depth, JPDAM_sim):
+        # todo: implement
+        ownship = self.state
+
+        y_curr = self.targ_state[depth]
+        self.targ_state_at_node = y_curr
+        beliefs = []
+        meas = []
+        for i in range(int(len(self.targ_state) / self.y_dim)):  # loop over number of targets
+            y_targ_predict = y_curr[i * self.y_dim:i * self.y_dim + self.y_dim]
+            cov_targ = self.Sigma[i * self.y_dim:i * self.y_dim + self.y_dim,
+                       i * self.y_dim:i * self.y_dim + self.y_dim]
+
+            # already have mean_predict, get cov predict
+            A = robot.tmm.targets[i].getJacobian()
+            W = robot.tmm.targets[i].getNoise()
+            cov_targ_predict = A @ cov_targ @ A.transpose() + W
+        return None
+
     def filter_cov_JPDA(self, robot, depth, JPDA_sim):
         # first, grab the predicted mean and covariance
         ownship = self.state   # already computed SearhState.move()
 
         y_curr = self.targ_state[depth]
+        self.targ_state_at_node = y_curr
         beliefs = []
         meas = []
         for i in range(int(len(self.targ_state)/self.y_dim)): # loop over number of targets
@@ -89,7 +125,8 @@ class SearchState:
 
             beliefs.append(GaussianBelief(y_targ_predict, cov_targ_predict))
             predicted_meas = robot.sensor.observationModel(ownship, y_targ_predict)
-            meas.append(Measurement(predicted_meas, 0, 1))
+            if robot.sensor.in_FOV(predicted_meas):
+                meas.append(Measurement(predicted_meas, 0, 1))
 
         #now, with measurements, and predicted beliefs, apply the JPDAF
         filter_output = JPDA_sim.filter(meas, beliefs, ownship)
@@ -118,7 +155,7 @@ class SearchState:
             Sigma_targ = self.Sigma[start_block:end_block, start_block:end_block]  # todo: use block operator
             cov_update_targ, inn_cov_targ = KalmanFilterCovAndInnovationCov(Sigma_targ, A, W, H, V)
             self.Sigma[start_block:end_block, start_block:end_block] = cov_update_targ
-            self.inn_cov.append(inn_cov_targ)
+            #self.inn_cov.append(inn_cov_targ)
             targ_num += 1
 
         return None
@@ -161,7 +198,8 @@ class SearchState:
                 setattr(state_copy, k, deepcopy(v, memodict))
             elif isinstance(v, (list, tuple)):
                 if len(v) == 0:
-                    setattr(state_copy, k, copy(v))  # if list is empty
+                    #setattr(state_copy, k, copy(v))  # if list is empty
+                    setattr(state_copy, k, [])
                 elif isinstance(v[0], (list, tuple)):
                     setattr(state_copy, k, deepcopy(v, memodict))
                 else:
@@ -174,7 +212,8 @@ class SearchState:
 
 
 class Planner:
-    def __init__(self, actions, cost_function, filter_type, JPDAF_sim=None, final_cost=False, dt=1, log_file=None, log_flag=False):
+    def __init__(self, actions, cost_function, filter_type, JPDAF_sim=None, JPDAFM_sim = None, final_cost=False, dt=1,
+                 log_file=None, log_flag=False):
         self.actions = actions
         self.cost_function = cost_function
         self.filter = filter_type
@@ -182,6 +221,7 @@ class Planner:
         self.log_file = log_file
         self.final_cost = final_cost
         self.JPDAF_sim = JPDAF_sim      # object that will be passed predicted beliefs and measurements
+        self.JPDAFM_sim = JPDAFM_sim
         self._log_flag = log_flag
 
     def planFVI(self, robot, T, debug=False):
@@ -221,7 +261,7 @@ class Planner:
             self.log_planner_path(optimal_node)
 
 
-        return path_to_node
+        return path_to_node, optimal_node
 
 
     def plan_RVI(self, robot, T, delta, eps, debug=False):

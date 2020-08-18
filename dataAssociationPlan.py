@@ -36,7 +36,7 @@ class JPDAF_simulate:
         event_matrices = self.generate_association_events_no_clutter(Omega)
         event_probabilities = self.get_event_probabilities_no_clutter(event_matrices, measurements, targ_predict_beliefs)
 
-        association_probability_matrix = np.zeros(Omega.shape)  # no extra row for probability not detected
+        association_probability_matrix = np.zeros((Omega.shape[0] + 1, Omega.shape[1]))  # no extra row for probability not detected
         self.get_association_probabilities_no_clutter(association_probability_matrix, event_matrices, event_probabilities)
 
         output = self.update_estimates_no_clutter(association_probability_matrix, measurements, targ_predict_beliefs)
@@ -58,11 +58,12 @@ class JPDAF_simulate:
             W_k = targ_predict_beliefs[i]._cov @ self._H_k_list[i].transpose() @ np.linalg.inv(self._inn_cov_list[i])
             P_k = self.get_P_k(prob_mat[:, i], measurements, self._z_predict_list[i], weighted_innovation, W_k)
             S_k = self._inn_cov_list[i]
+            beta_0 = prob_mat[-1, i]
             P_pred = targ_predict_beliefs[i]._cov
             x_pred = targ_predict_beliefs[i]._mean
 
             mean_update = x_pred + W_k @ weighted_innovation
-            cov_update = P_pred - W_k @ S_k @ W_k.transpose() + P_k
+            cov_update = P_pred - (1 - beta_0) * W_k @ S_k @ W_k.transpose() + P_k
             output.append(GaussianBelief(mean_update, cov_update))
 
         return output
@@ -114,6 +115,9 @@ class JPDAF_simulate:
                     relevant_probs = [event_prob[i] if event_indicators[i] == 1 else 0 for i in range(len(event_mat))]
                     prob_mat[i, j] = sum(relevant_probs)
 
+        # add last row of association probability matrix = probability none of the mesasurements originated from target
+        for i in range(prob_mat.shape[1]):
+            prob_mat[-1, i] = 1 - prob_mat[:-1, i].sum()
 
         return None
 
@@ -160,7 +164,8 @@ class JPDAF_simulate:
         num_targs = len(targ_predict_beliefs)
         num_meas = len(measurements)
         y_dim = targ_predict_beliefs[0]._mean.shape[0]
-        z_dim = measurements[0].get_z_dim()
+        #z_dim = measurements[0].get_z_dim()
+        z_dim = 1  # todo: get this value automatically
 
         Omega = np.zeros((num_meas, num_targs))
 

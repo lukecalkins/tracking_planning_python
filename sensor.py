@@ -25,7 +25,7 @@ class Sensor:
 
 class BearingSensor(Sensor):
 
-    def __init__(self, min_range, max_range, min_hang, max_hang, b_sigma, detection_prob):
+    def __init__(self, min_range, max_range, min_hang, max_hang, b_sigma, detection_prob, FOV=None):
         Sensor.__init__(self, 1)              #scalar measurement for bearing only
         self._min_range = min_range
         self._max_range = max_range
@@ -33,6 +33,7 @@ class BearingSensor(Sensor):
         self._max_hang = max_hang
         self._b_sigma = b_sigma
         self._detection_prob = detection_prob
+        self._FOV = FOV * np.pi/180  # provided as degrees, convert to radians
 
     def get_b_sigma(self):
         return self._b_sigma
@@ -47,6 +48,50 @@ class BearingSensor(Sensor):
                 output.append(measurement)
 
         return output, len(targets)
+
+    def senseTargets_FOV(self, own_state, targets):
+        """
+        returns bearing only sensors with a limited FOV
+        :param own_state:
+        :param targets:
+        :return:
+        """
+        output = []
+        num_targs_seen = 0
+        for target in targets:
+            sensor_output = self.sense_FOV(own_state, target)
+            if sensor_output:
+                output.append(sensor_output)
+                num_targs_seen += 1
+
+        return output, num_targs_seen
+
+    def sense_FOV(self, own_state, target):
+
+        target_state = target.getState()
+        bearing = self.observationModel(own_state, target_state)
+        noise = np.random.normal(0, self._b_sigma)
+        z = restrict_angle(bearing + noise)
+        if self.in_FOV(z):
+            return Measurement(np.array([z]), target.getID(), 1)
+        else:
+            return None
+
+    def in_FOV(self, bearing):
+        """
+        determines whether measurement is within FOV of the sensor
+        :param bearing:
+        :return:
+        """
+        delta = self._FOV / 2
+        port_FOV = [np.pi/2 - delta, np.pi/2 + delta]
+        starboard_FOV = [-np.pi/2 - delta, -np.pi/2 + delta]
+        if port_FOV[0] <= bearing <= port_FOV[1]:
+            return True
+        elif starboard_FOV[0] <= bearing <= starboard_FOV[1]:
+            return True
+        else:
+            return False
 
     def senseTargets_ambiguity(self, own_state, targets):
         """

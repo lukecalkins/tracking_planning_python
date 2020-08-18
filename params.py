@@ -24,6 +24,9 @@ class Parameters:
                 self.detection_prob = sense_node['detection_prob']
                 self.unresolved_resolution = sense_node['unresolved_resolution']
                 self.masking_proximity = sense_node['masking_proximity']
+                self.fov = sense_node['FOV']
+                self.max_range = sense_node['max_range']
+                self.min_range = sense_node['min_range']
             with open(target_config, 'r') as targ_file:
                 targ_node = yaml.load(targ_file, Loader=yaml.FullLoader)
                 self.y_dim = targ_node['targ_dim']
@@ -39,6 +42,7 @@ class Parameters:
             self.clutter_density = node['clutter_density']
             self.estimator_verbose = node['estimator_verbose']
             self.sequential_resolution_update_flag = node['sequential_resolution_update_flag']
+            self.num_targs = 0
 
             self.robots = self.buildRobots(yaml_file)
             self.world = self.buildTMM(target_config)
@@ -101,9 +105,10 @@ class Parameters:
                     sense_max_hang = sense_node['max_hang']
                     sense_b_sigma = sense_node['b_sigma']
                     detection_prob = sense_node['detection_prob']
+                    FOV = sense_node['FOV']
 
                     sensor = BearingSensor(sense_min_range, sense_max_range, sense_min_hang, sense_max_hang,
-                                           sense_b_sigma, detection_prob)
+                                           sense_b_sigma, detection_prob, FOV)
 
                 robots.append(Robot(initial_state, sensor, info_target_model))
 
@@ -126,6 +131,7 @@ class Parameters:
             for i in range(len(y0)):
                 target = Target(y0[i], cov_pos, cov_vel, self.samp, IDs[i], targ_dim)
                 target_model.addTarget(IDs[i], target)
+                self.num_targs += 1
 
         return target_model
 

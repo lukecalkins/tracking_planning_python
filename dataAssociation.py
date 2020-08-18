@@ -399,7 +399,7 @@ class JPDAFMerged:
             gda.calculate_association_probabilities(self._clutter_density, self._FOV, self.sensor._detection_prob)
             gda.build_C_k_matrices()
             gda.perform_measurement_update_one_step(full_belief, H_tilde, b_sigma, measurements, z_target_predict, self._FOV)
-            if self.sequential_resolution_update_flag  == 1:
+            if self.sequential_resolution_update_flag == 1:
                 gda.perform_resolution_update_sequential(H_tilde, self.bearing_res, z_target_predict)
             else:
                 gda.perform_resolution_update_one_step(H_tilde, self.bearing_res, z_target_predict)

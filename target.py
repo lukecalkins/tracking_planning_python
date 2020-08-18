@@ -213,7 +213,7 @@ class InfoTargetModel(TargetModel):
             target_history.append(target_state)
             target_state = A @ target_state
 
-        return target_history
+        return np.array(target_history)
 
 
 

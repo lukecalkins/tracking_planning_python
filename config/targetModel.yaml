@@ -2,8 +2,8 @@
 targ_dim: 4
 IDs: [100, 200, 300, 400, 500, 600]
 y0: # initial states of targets
-  - [-500, 300, 10, 0]
-  - [500, 500, -10, 0]
+  - [-500, -250, 10, 0]
+  - [-900, -250, 20, 10]
 #  - [500, 400, 0, 0]
 #  - [-750, 80, -20, 10]
 #  - [-750, -10, 0, 0]
@@ -11,5 +11,5 @@ y0: # initial states of targets
 
 cov_pos: 10000  # prior covariance in each
 cov_vel: 25
-process_cov_pos: 10  # covariance in the target motion model
-process_cov_vel: 0.5
+process_cov_pos: 5  # covariance in the target motion model
+process_cov_vel: 0.1

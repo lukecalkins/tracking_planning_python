@@ -1,6 +1,6 @@
 ---
 Robots:
-- initial_state: [0, 0, -1.57080]   # pi/2 = 1.57080
+- initial_state: [0, -750, 0]   # pi/2 = 1.57080
   sensorConfig: config/sensors/bearing.yaml
   dynamicsConfig: config/dynamics/dubins_car.yaml
 
@@ -8,9 +8,9 @@ Robots:
 targetConfig: config/targetModel.yaml
 plannerConfig: config/planner.yaml
 
-Tmax: 80
+Tmax: 90
 samp: 1.0
-random_seed: 1
+random_seed: 5
 map_min: [-1000, -1000]
 map_max: [1000, 1000]
 
@@ -19,5 +19,5 @@ clutter_density: 0.03183  # 3.183 = 20 per 360 degrees ~ 1 every 18 degrees
 gate_level: 0.99
 estimator_verbose: False
 horizon: 10  # planning horizon
-n_controls: 5  # Re-planning time
+n_controls: 10  # Re-planning time
 sequential_resolution_update_flag: 1  # 0 if resolution update should be done in one step
