@@ -43,6 +43,13 @@ if __name__ == '__main__':
         #print('True     : ', targets[0].getState())
         #print('Estimated: ', robot.tmm.targets[100].getState())
 
+        if kk % p.n_controls == 0:
+            for robot in robots:
+                planner_output, optimal_node = planner.planFVI(robot, p.horizon)
+                steps_into_plan = 0
+
+        print("planner output", planner_output)
+
         for i in range(len(robots)):
             #measurements, num_target_seen = robots[i].sensor.senseTargets(robots[i].getState(), target_model.getTargets())
             #measurements, num_targs_seen = robots[i].sensor.senseTargets_interference_n(robots[i].getState(), targets, proximity)            #print("num targs_seen: ", num_targs_seen)
@@ -60,12 +67,7 @@ if __name__ == '__main__':
             filter_output = JPDAF_merged.filter(measurements, robots[i])
             robots[i].tmm.updateBelief(filter_output)
 
-        if kk % p.n_controls == 0:
-            for robot in robots:
-                planner_output, optimal_node = planner.planFVI(robot, p.horizon)
-                steps_into_plan = 0
 
-        print("planner output", planner_output)
         for robot in robots:
             if len(planner_output) == 0:
                 robot.applyControl([0,  0], 1)
@@ -91,7 +93,7 @@ if __name__ == '__main__':
 
         print("Timestep: ", kk)
 
-    filename = 'planning/merged/2_targ/JPDAF_merged_FOV_total_cost_measurement_update_test1_kalman'
+    filename = 'planning/merged/2_targ/JPDAF_merged_FOV_total_cost_plan_first'
     #filename = 'planning/JPDAF/4_targ/4_targ_no_plan_masked'
     plotter.save_video(filename=filename, fps=5)
     #plotter.save_track_stats(filename=filename)
