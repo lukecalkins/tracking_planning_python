@@ -1,8 +1,11 @@
-from kalmanFilter import GaussianBelief
+from kalmanFilter import GaussianBelief, KalmanFilterMeasurementUpdate
 import numpy as np
 import itertools as IT
 from copy import copy, deepcopy
 from utils import gaussian_pdf
+from dataAssociation import get_unresolved_prob_bearing, GraphDataAssociation
+from graph import Graph
+from sensor import Measurement
 
 
 class JPDAF_simulate:
@@ -36,7 +39,7 @@ class JPDAF_simulate:
         event_matrices = self.generate_association_events_no_clutter(Omega)
         event_probabilities = self.get_event_probabilities_no_clutter(event_matrices, measurements, targ_predict_beliefs)
 
-        association_probability_matrix = np.zeros((Omega.shape[0] + 1, Omega.shape[1]))  # no extra row for probability not detected
+        association_probability_matrix = np.zeros((Omega.shape[0] + 1, Omega.shape[1]))  # still need extra row for case outside FOV (not detected)
         self.get_association_probabilities_no_clutter(association_probability_matrix, event_matrices, event_probabilities)
 
         output = self.update_estimates_no_clutter(association_probability_matrix, measurements, targ_predict_beliefs)
@@ -280,18 +283,26 @@ class JPDAF_simulate:
 
         return gate_volume
 
+######################################################################
+###################   End JPDAF_simulate #############################
+######################################################################
 
 class JPDAF_merged_simulate:
 
-    def __init__(self, sensor, gate_level=0.99, verbose=False):
+    def __init__(self, sensor, unresolved_resolution, sequential_resolution_update_flag,
+                 FOV=2*np.pi, gate_level=0.99, verbose=False, merged_thresh=0.5):
         self.sensor = sensor
+        self.bearing_res = unresolved_resolution
+        self.sequential_resolution_update_flag = sequential_resolution_update_flag
         self._gate_level = gate_level
         self._verbose = verbose
+        self._FOV = FOV
+        self.merging_threshold = merged_thresh
         self._inn_cov_list = []   # each iteration, this will be populated with the innovation covariance of each target
         self._z_predict_list = []
         self._H_k_list = []
 
-    def filter(self, measurements, robot, ownship):
+    def filter(self, measurements, targ_predicted_beliefs, ownship):
         """
         fully external functioning JPDAF filter without clutter and with perfect detections
         :param measurements: measurement list
@@ -304,7 +315,267 @@ class JPDAF_merged_simulate:
         self._inn_cov_list = []
         self._z_predict_list = []
         self._H_k_list = []
+        z_dim = self.sensor.z_dim
+        y_dim = targ_predicted_beliefs[0]._mean.shape[0]
 
-        Omega = self.gate_measurements(measurements, robot, self._gate_level)
-        if self._verbose:
-            print("JPDAF_merged, Omega matrix: ", Omega)
+        H_tilde = self.build_H_tilde(targ_predicted_beliefs, ownship, z_dim)
+        z_target_predict = np.array(self._z_predict_list)
+
+        graph = self.get_most_likely_graph(ownship, targ_predicted_beliefs, self.sensor)
+        graph.build_resolution_update_multipliers()
+
+
+        return None  # todo: remove
+
+    def filter_most_likely(self, graph, beliefs, ownship, bearings):
+        """
+        performs filter update given the correct merging graph based on thresholding.
+        :param graph:
+        :param beliefs:
+        :param ownship:
+        :param bearings: numpy array of bearings
+        :return:
+        """
+
+        n_targs = len(beliefs)
+        y_dim = beliefs[0]._mean.shape[0]  # todo: case where no targets tracked
+        z_dim = self.sensor.z_dim
+        self._inn_cov_list = []
+        self._z_predict_list = []
+        self._H_k_list = []
+
+        visited = set()
+        meas = []
+        targs_on_meas = []
+        for i in range(n_targs):
+            if i not in visited:
+                visited.add(i)
+                if not self.sensor.in_FOV(bearings[i]):
+                    continue
+                if graph.is_connected(i):
+                    connected_targs = graph.get_connected_targets_raw_index(i)
+                    for j in connected_targs:
+                        visited.add(j)
+                else:
+                    connected_targs = []
+                connected_targs.insert(0, i)
+                bearings_to_merge = bearings[connected_targs]
+                mean_bearing = bearings_to_merge.mean()
+                meas.append(Measurement(mean_bearing, 0, 1))
+                targs_on_meas.append(connected_targs)
+
+        # now construct association mat from
+        num_meas = len(meas)
+        Omega = np.zeros((num_meas, n_targs))
+        for i in range(num_meas):
+            Omega[i, targs_on_meas[i]] = 1
+
+        # now perform measurement update with correct data  association
+        C_k = self.get_C_k_from_event_no_clutter(Omega)
+        H_tilde = self.build_H_tilde(beliefs, ownship, z_dim)
+        full_belief = self.get_full_predicted_belief(beliefs)
+        measurement_updated_belief = self.perform_measurement_update_most_likely(full_belief, H_tilde, self.bearing_res,
+                                                                                  meas, self._z_predict_list, C_k, Omega)
+        # separate out each target beliefs
+        output = []
+        for i in range(n_targs):
+            start = i * y_dim
+            stop = start + y_dim
+            mean = measurement_updated_belief._mean[start:stop]
+            cov = measurement_updated_belief._cov[start:stop, start:stop]
+            output.append(GaussianBelief(mean, cov))
+
+        meas_as_list = []
+        for item in meas:
+            meas_as_list.append(item.getZ())
+        return output, meas_as_list
+
+    def perform_measurement_update_most_likely(self, full_belief, H_tilde, b_sigma, measurements, z_target_predict, C_k, Omega):
+        """
+        takes the correct data association as defined by C_k and performs the measurement update in one step
+        :param full_belief:
+        :param H_tilde:
+        :param b_sigma:
+        :param measurements:
+        :param z_target_predict:
+        :param FOV:
+        :param C_k:
+        :return:
+        """
+
+        if C_k is None:
+            print("Using prediction only")
+            return full_belief
+        #if True:
+            #return full_belief
+        else:
+            print("using measurement update")
+            H_caron = C_k @ H_tilde
+            Z_k_target, num_target_per_meas = self.get_target_generated_measurements_no_clutter(measurements, Omega)
+            V = self.build_measurement_covariance_merged(b_sigma, num_target_per_meas)
+            measurement_updated_belief = KalmanFilterMeasurementUpdate(full_belief._mean, full_belief._cov, H_caron, V,
+                                                                       Z_k_target, C_k @ z_target_predict)
+        return measurement_updated_belief
+
+    def build_measurement_covariance_merged(self, b_sigma, num_target_per_meas):
+        """
+        build measurement noise covariance matrix used in kalman filter. Size of variance depends on number of targets
+        that generated the measurement
+        :param b_sigma: sensor noise standard deviation parameter
+        :param num_target_per_meas: vector with each entry containing the number of targets that generated that measurement
+        :return: V: measurement noise covariance matrix
+        """
+        num_targ_meas = num_target_per_meas.shape[0]
+        V = np.zeros((num_targ_meas, num_targ_meas))
+        for i in range(num_targ_meas):
+            V[i, i] = (num_target_per_meas[i] * b_sigma) ** 2
+        return V
+
+    def get_target_generated_measurements_no_clutter(self, measurements, Omega):
+        """
+        returns appropriate stacked measurement vector based on merging of targets as dictated by C_k
+        :param measurements:
+        :param Omega: association mat (no clutter)
+        :return:
+        """
+        num_meas = Omega.shape[0]
+        Z_k_target = np.zeros((num_meas, 1))
+        num_targets_per_meas = np.zeros(num_meas)
+        targ_meas_index = 0
+        for i in range(num_meas):
+            Z_k_target[targ_meas_index, 0] = measurements[i].getZ()
+            num_targets_per_meas[targ_meas_index] = sum(Omega[i, :])
+            targ_meas_index += 1
+        return Z_k_target, num_targets_per_meas
+
+    def get_C_k_from_event_no_clutter(self, event_mat):
+        num_meas = event_mat.shape[0]
+        num_targ = event_mat.shape[1]
+        num_targ_meas = num_meas
+        if num_targ_meas == 0:
+            return None
+        C_k = np.zeros((num_targ_meas, num_targ))
+        targ_meas_index = 0
+
+        for i in range(num_meas):
+            target_indices = np.nonzero(event_mat[i, :])[0]
+            C_k[targ_meas_index, target_indices] = 1/len(target_indices)
+            targ_meas_index += 1
+
+        return C_k
+
+
+    def get_graph_data_association_hypotheses(self, measurements, graphs, beliefs):
+        """
+        function that takes the measurements and all feasible graphs from the target predictions and creates a list of
+        objects where each item is a graph and possible data association for the graph.
+        :param measurements:
+        :param graphs:
+        :return:
+        """
+        # Create size of association matrix
+        n_targs = len(beliefs)
+        m_meas = len(measurements)
+
+        meas_range = list(range(n_targs + 1))
+        rows_list = m_meas * [meas_range]  # every measurement could come from every target, or clutter
+        all_events = list(IT.product(*rows_list))
+
+        gda_list = []
+        for i in range(len(graphs)):
+            gda = GraphDataAssociation(graphs[i])
+            gda.build_data_association_hypotheses(all_events)
+            gda_list.append(gda)
+
+        return gda_list
+
+    def get_most_likely_graph(self, ownship, beliefs, sensor, thresh=0.5):
+
+        bearings = get_bearings(ownship, beliefs, sensor)
+        n_targs = len(beliefs)
+        sorted_index = sorted(range(len(bearings)), key=lambda k: bearings[k], reverse=True)
+
+        # construct feasible edge set
+        feasible_edges = []
+        for i in range(n_targs - 1):
+            bearing_i = bearings[sorted_index[i]]
+            bearing_j = bearings[sorted_index[i + 1]]
+            if sensor.in_same_FOV(bearing_i, bearing_j):
+                feasible_edges.append((sorted_index[i], sorted_index[i+1]))
+        if n_targs > 2:
+            bearing_i = bearings[sorted_index[n_targs - 1]]
+            bearing_j = bearings[sorted_index[0]]
+            if sensor.in_same_FOV(bearing_i, bearing_j):
+                feasible_edges.append((sorted_index[n_targs - 1], sorted_index[0]))
+
+        # now loop through feasible edges and decide whether edge is there or not based on threshold
+        edges = []
+        for edge in feasible_edges:
+            bearing_i = bearings[edge[0]]
+            bearing_j = bearings[edge[1]]
+            prob = get_unresolved_prob_bearing(bearing_i, bearing_j, self.bearing_res)
+            if prob >= thresh:
+                edges.append(edge)
+
+        most_likely_graph = Graph(n_targs, edges, feasible_edges)
+
+        return most_likely_graph
+
+    def build_H_tilde(self, targ_predict_beliefs, ownship, z_dim):
+        """
+        this function takes the beliefs
+        :param beliefs:
+        :return:
+        """
+        y_dim = targ_predict_beliefs[0]._mean.shape[0]
+        num_targs = len(targ_predict_beliefs)
+        H_tilde = np.zeros((z_dim * num_targs, y_dim * num_targs))
+        for i in range(num_targs):
+            start_row = i * z_dim
+            stop_row = start_row + z_dim
+            start_col = i * y_dim
+            stop_col = start_col + y_dim
+            z_predict = self.sensor.observationModel(ownship, targ_predict_beliefs[i]._mean)
+            H = np.zeros((z_dim, y_dim))
+            V = np.zeros((z_dim, z_dim))
+            self.sensor.getJacobian(H, V, ownship, targ_predict_beliefs[i]._mean)
+            self._H_k_list.append(H)
+            self._z_predict_list.append(z_predict)
+            H_tilde[start_row:stop_row, start_col:stop_col] = H
+
+        return H_tilde
+
+    def get_full_predicted_belief(self, beliefs):
+        """
+        same as get_predicted beliefs  but just stacking all target beliefs into a single state vector and
+        covariance matrix
+        :param beliefs: list of beliefs
+        :return:
+        """
+        y_dim = beliefs[0]._mean.shape[0]
+        num_targs = len(beliefs)
+        system_state_vector = np.zeros((num_targs * y_dim,  1))
+        system_covariance = np.zeros((num_targs * y_dim, num_targs * y_dim))
+        for i in range(num_targs):
+            start = i * y_dim
+            stop = start + y_dim
+            system_state_vector[start:stop] = beliefs[i]._mean
+            system_covariance[start:stop, start:stop] = beliefs[i]._cov
+        system_belief = GaussianBelief(system_state_vector, system_covariance)
+
+        return system_belief
+
+
+def get_bearings(ownship, beliefs, sensor):
+    """
+    returns list of bearing in target order
+    :param ownship:
+    :param beliefs:
+    :return:
+    """
+    bearings = []
+    for i in range(len(beliefs)):
+        bearing = sensor.observationModel(ownship, beliefs[i].getMean())
+        bearings.append(bearing)
+
+    return np.array(bearings)

@@ -49,6 +49,8 @@ class BearingSensor(Sensor):
 
         return output, len(targets)
 
+
+
     def senseTargets_FOV(self, own_state, targets):
         """
         returns bearing only sensors with a limited FOV
@@ -92,6 +94,44 @@ class BearingSensor(Sensor):
             return True
         else:
             return False
+
+    def in_same_FOV(self, bearing_i, bearing_j):
+        """
+        return true if bearings are both in the field of view of the sensor
+        :param bearing_i:
+        :param bearing_j:
+        :return:
+        """
+        if self.in_FOV(bearing_i):
+            if self.in_FOV(bearing_j):
+                bearing_i_side = self.get_FOV_side(bearing_i)
+                bearing_j_side = self.get_FOV_side(bearing_j)
+                if bearing_i_side == bearing_j_side:
+                    return True
+                else:
+                    return False  # both in field of view but on opposite sides
+            else:
+                return False
+        else:
+            return False
+
+    def get_FOV_side(self, bearing):
+        """
+        takes a bearing known to be within the FOV and returns whether it is port or starboard
+        :param bearing:
+        :return:
+        """
+        delta = self._FOV / 2
+        port_FOV = [np.pi / 2 - delta, np.pi / 2 + delta]
+        starboard_FOV = [-np.pi / 2 - delta, -np.pi / 2 + delta]
+        if port_FOV[0] <= bearing <= port_FOV[1]:
+            return "port"
+        elif starboard_FOV[0] <= bearing <= starboard_FOV[1]:
+            return "starboard"
+        else:
+            exit("get_FOV_side called on bearing not within field of view")
+
+
 
     def senseTargets_ambiguity(self, own_state, targets):
         """
@@ -299,6 +339,76 @@ class BearingSensor(Sensor):
                     mean_bearing = generate_mean_bearing(true_bearings,  conn_seq)
                 else:
                     mean_bearing = true_bearings[i]
+                noise = np.random.normal(0, num_targs_on_meas * self._b_sigma)
+                bearing_meas = Measurement(restrict_angle(mean_bearing + noise), None, 1)
+                num_targs_seen += 1
+                meas_list.append(bearing_meas)
+
+        return meas_list, num_targs_seen
+
+    def senseTargets_resolution_model_n_FOV(self, own_state, targets, bearing_res):
+        """
+        Applies resolution model in
+        :param own_state:
+        :param targets:
+        :return:
+        """
+
+        n_targs = len(targets)
+        true_bearings = []
+        for target in targets:
+            true_bearings.append(self.observationModel(own_state, target.getState()))
+
+        # sort the bearings
+        true_bearings = np.array(true_bearings)
+        true_bearings_2pi = true_bearings + np.pi
+        sorted_index = sorted(range(len(true_bearings)), key=lambda k: true_bearings[k], reverse=True)
+
+        # construct feasible edge set (can only merge with targets in same FOV)
+        feasible_edges = []
+        for i in range(n_targs - 1):
+            bearing_i = true_bearings[sorted_index[i]]
+            bearing_j = true_bearings[sorted_index[i + 1]]
+            if self.in_same_FOV(bearing_i, bearing_j):
+                feasible_edges.append((sorted_index[i], sorted_index[i + 1]))
+        if n_targs > 2:
+            bearing_i = true_bearings[sorted_index[n_targs - 1]]
+            bearing_j = true_bearings[sorted_index[0]]
+            if self.in_same_FOV(bearing_i, bearing_j):
+                feasible_edges.append((sorted_index[n_targs - 1], sorted_index[0]))
+
+        # only consider feasible edges when evaluating merging
+        merged_mat = np.zeros((n_targs, n_targs))
+        merged_edges = []
+        for edge in feasible_edges:
+            bearing_i = true_bearings[edge[0]]
+            bearing_j = true_bearings[edge[1]]
+            delta_bearing = np.abs(bearing_i - bearing_j)  # todo: delta changes when wrapped around in bearing
+            if delta_bearing > np.pi:
+                delta_bearing = 2*np.pi - delta_bearing
+            p_merged = np.exp(-1./2 * delta_bearing * 1./(bearing_res ** 2) * delta_bearing)
+            rand_draw = np.random.uniform()
+            if rand_draw < p_merged:  #targets are merged
+                merged_mat[edge[0], edge[1]] = 1
+                merged_mat[edge[1], edge[0]] = 1  # symmetric
+                merged_edges.append(edge)
+
+        merged_graph = Graph(n_targs, merged_edges, feasible_edges)
+
+        # Generate appropriate number of measurements using merged measurement matrix
+        visited = set()
+        num_targs_seen = 0
+        meas_list = []
+        for i in range(n_targs):
+            if i not in visited:
+                connected_targs = merged_graph.get_connected_targets_raw_index(i)
+                visited.add(i)
+                num_targs_on_meas = 1
+                for k in range(len(connected_targs)):
+                    visited.add(connected_targs[k])
+                    num_targs_on_meas += 1
+                targs_on_meas = np.concatenate((np.array([i]), np.array(connected_targs, dtype=int)))
+                mean_bearing = true_bearings[targs_on_meas].mean()
                 noise = np.random.normal(0, num_targs_on_meas * self._b_sigma)
                 bearing_meas = Measurement(restrict_angle(mean_bearing + noise), None, 1)
                 num_targs_seen += 1

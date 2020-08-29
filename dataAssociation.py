@@ -913,8 +913,7 @@ class GraphDataAssociation:
             for i in range(len(event)):  # i represent measurement number, event[i] is the column (target) to assign a 1
                 Omega[i, event[i]] = 1
                 if event[i] > 0:  # belongs to a target
-                    if self.graph.is_connected(
-                            event[i] - 1):  # connected to another target, add 1's for measurement to appropriate target
+                    if self.graph.is_connected(event[i] - 1):  # connected to another target, add 1's for measurement to appropriate target
                         connected_targs = self.graph.get_connected_targets(event[i] - 1)
                         Omega[i, connected_targs] = 1
             is_in = [(Omega == item).all() for item in
@@ -981,7 +980,7 @@ def get_bearings(robot, beliefs):
 
     return np.array(bearings)
 
-def get_unresolved_prob_bearing(b0, b1, bearing_res, sensor, own_state):
+def get_unresolved_prob_bearing(bearing_i, bearing_j, bearing_res):
     """
     calculates the probability that two targets are unresolved in bearing
     :param b0: belief for target 0 (mean and cov)
@@ -991,12 +990,10 @@ def get_unresolved_prob_bearing(b0, b1, bearing_res, sensor, own_state):
     :return:
     """
 
-    bearing0 = sensor.observationModel(own_state, b0.getMean())
-    bearing1 = sensor.observationModel(own_state, b1.getMean())
-    delta_bearing = restrict_angle(bearing0 - bearing1)
+    delta_bearing = restrict_angle(bearing_i - bearing_j)
 
-    res_cov = 1./(np.sqrt((2*np.log(2))))*bearing_res ** 2
-    prob_unresolved = np.exp(-delta_bearing * 1./res_cov * delta_bearing)
+    res_cov = bearing_res ** 2
+    prob_unresolved = np.exp(-1./2 * delta_bearing * 1./res_cov * delta_bearing)
 
     return prob_unresolved
 

@@ -151,10 +151,14 @@ class Parameters:
             turn_radius = plan_node['turn_radius']
             filter_type = plan_node['filter_type']
 
-            # list actions available to vehicle for planning (speed, turn_rate)
-            actions = [[speed, 0], [speed, speed / turn_radius], [speed, -speed / turn_radius]]
+            # list actions available to vehicle for planning (speed, turn_rate) todo: configure this in the planner yaml
+            #actions = [[speed, 0], [speed, speed / turn_radius], [speed, -speed / turn_radius]]
+            actions = [[speed, 0]]
 
             JPDAF_simulator = DAP.JPDAF_simulate(self.robots[0].getSensor(), gate_level=self.gate_level, verbose=False)
+            JPDAF_merged_simulator = DAP.JPDAF_merged_simulate(self.robots[0].getSensor(), self.unresolved_resolution,
+                                                               self.sequential_resolution_update_flag, FOV=self.fov,
+                                                               gate_level=self.gate_level, verbose=False)
 
             cost = plan_node['cost']
             if cost == 'log_det':
@@ -168,8 +172,8 @@ class Parameters:
             else:
                 print("Cost function not recognized in initialization")
                 exit()
-            planner = plan.Planner(actions, cost_func, filter_type, JPDAF_simulator, log_file=planner_log_file,
-                                   log_flag=planner_log_flag, final_cost=planner_final_cost)
+            planner = plan.Planner(actions, cost_func, filter_type, JPDAF_simulator, JPDAF_merged_simulator,
+                                   log_file=planner_log_file, log_flag=planner_log_flag, final_cost=planner_final_cost)
 
         return planner
 

@@ -53,6 +53,7 @@ class StatePlotter:
                 self.ax = self.fig.add_subplot(221)
                 self.ax_meas = self.fig.add_subplot(222)
                 self.ax_plan = self.fig.add_subplot(223)
+                self.ax_plan_meas = self.fig.add_subplot(224)
             else:
                 self.ax = self.fig.add_subplot(121)
                 self.ax_meas = self.fig.add_subplot(122)
@@ -93,7 +94,7 @@ class StatePlotter:
         else:
             return self.ax.add_patch(patches.Polygon(XY, facecolor=clr, zorder=2, alpha=0.5))
 
-    def draw_fov(self, pose, sense_range, fov, clr='c'):
+    def draw_fov(self, ax, pose, sense_range, fov, clr='c'):
 
         x = pose[0]
         y = pose[1]
@@ -103,7 +104,7 @@ class StatePlotter:
         #create port wedge
         theta1 = th_deg + 90 - fov/2
         theta2 = th_deg + 90 + fov/2
-        self.ax.add_patch(patches.Wedge((x, y), sense_range, theta1, theta2,
+        ax.add_patch(patches.Wedge((x, y), sense_range, theta1, theta2,
                                                fill=False,
                                                edgecolor='b',
                                                linewidth=1.5,
@@ -113,7 +114,7 @@ class StatePlotter:
         #create starboard wedge
         theta1 = th_deg - 90 - fov / 2
         theta2 = th_deg - 90 + fov / 2
-        self.ax.add_patch(patches.Wedge((x, y), sense_range, theta1, theta2,
+        ax.add_patch(patches.Wedge((x, y), sense_range, theta1, theta2,
                                         fill=False,
                                         edgecolor='b',
                                         linewidth=1.5,
@@ -195,10 +196,11 @@ class StatePlotter:
                        [y + size * np.sin(th), y + size * np.sin(th - 2.7), y + size * np.sin(th + 2.7)]]).transpose()
         return self.ax_meas.add_patch(patches.Polygon(XY, facecolor=clr, zorder=2, alpha=0.5))
 
-    def draw_planner_belief(self, plan_node, clr_list=None, size=1):
+    def draw_planner_belief(self, plan_node, max_range=None, fov=None, clr_list=None, size=1):
 
         pose = plan_node.state.state
         self.draw_robot(pose, size=size, ax=self.ax_plan)
+        self.draw_fov(self.ax_plan, pose, max_range, fov)
         y_dim = plan_node.state.y_dim
         num_targs = plan_node.state.targ_state[0].shape[0] // y_dim
         for i in range(num_targs):
@@ -209,6 +211,15 @@ class StatePlotter:
             cov = plan_node.state.Sigma[start:stop, start:stop]
             cov = cov[:2, :2]
             self.draw_cov(mean, cov, confidence=0.99, clr=clr_list[i], ax=self.ax_plan)
+
+        bearings = np.linspace(0, 2 * np.pi, num=100)
+        points_x = np.cos(bearings)
+        points_y = np.sin(bearings)
+        self.ax_plan_meas.plot(points_x, points_y)
+        measurements = plan_node.state.predicted_meas
+        for meas in measurements:
+            value = meas
+            self.ax_plan_meas.plot(np.cos(value), np.sin(value), c='r', marker='x', markersize=10)
 
 
 
@@ -227,11 +238,11 @@ class StatePlotter:
             pose = robot.getState()
             self.draw_robot(pose, size=robot_size)
             if self.FOV_flag:
-                self.draw_fov(pose, max_range, fov)
+                self.draw_fov(self.ax, pose, max_range, fov)
             if planner_output != None:
                 self.draw_planned_path(pose, planner_output)
             if self.plan_plot_flag:
-                self.draw_planner_belief(plan_node, clr_list, size=robot_size)
+                self.draw_planner_belief(plan_node, max_range, fov, clr_list, size=robot_size)
 
             info_ndx = 0
             for target in robot.tmm.targets:

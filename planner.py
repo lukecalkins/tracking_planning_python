@@ -7,7 +7,10 @@ from cost_function import *
 import sys
 from sensor import Measurement
 import json
-import copy
+from copy import copy, deepcopy
+from dataAssociation import get_unresolved_prob_bearing
+from dataAssociationPlan import get_bearings
+from graph import Graph
 
 """
 class Search_Node:
@@ -66,7 +69,7 @@ class SearchNode(Node):
         child = SearchNode(deepcopy(self.state), self.robot, self.cost_func, JPDAM_sim=self.JPDAM_sim,
                            parent=self, action=action)
         child.state.move(action)
-        child.state.filter_cov_JPDAM(self.robot, child.depth, self.JPDAM_sim)
+        child.state.filter_cov_JPDAM_most_likely(self.robot, child.depth, self.JPDAM_sim)
         child.state.total_cost = self.state.total_cost + child.state.get_cost(self.cost_func, child.depth)
 
         return child  # caller doesn't actually store it.
@@ -83,19 +86,84 @@ class SearchState:
         #self.inn_cov = []
         self.total_cost = 0
         self.node_cost = 0
+        #self.predicted_meas = []
 
     def move(self, action):
         self.state = propagateOwnshipEuler(self.state, action[0], action[1], self.dt)
 
+    def filter_cov_JPDAM_most_likely(self, robot, depth,  JPDAM_sim):
+        # todo: implement
+        ownship = self.state
+        thresh = JPDAM_sim.merging_threshold
+        bearing_res = JPDAM_sim.bearing_res
+
+        y_curr = self.targ_state[depth, :]
+        self.targ_state_at_node = y_curr
+        beliefs = []
+        for i in range(self.targ_state.shape[1] // self.y_dim):  # loop over number of targets
+            y_targ_predict = y_curr[i * self.y_dim:i * self.y_dim + self.y_dim].reshape(self.y_dim, 1)
+            cov_targ = self.Sigma[i * self.y_dim:i * self.y_dim + self.y_dim,
+                       i * self.y_dim:i * self.y_dim + self.y_dim]
+
+            # already have mean_predict, get cov predict
+            A = robot.tmm.targets[i].getJacobian()
+            W = robot.tmm.targets[i].getNoise()
+            cov_targ_predict = A @ cov_targ @ A.transpose() + W
+
+            beliefs.append(GaussianBelief(y_targ_predict, cov_targ_predict))
+
+        sensor = robot.sensor
+        bearings = get_bearings(ownship, beliefs, sensor)
+        n_targs = len(beliefs)
+        sorted_index = sorted(range(len(bearings)), key=lambda k: bearings[k], reverse=True)
+
+        # construct feasible edge set
+        feasible_edges = []
+        for i in range(n_targs - 1):
+            bearing_i = bearings[sorted_index[i]]
+            bearing_j = bearings[sorted_index[i + 1]]
+            if sensor.in_same_FOV(bearing_i, bearing_j):
+                feasible_edges.append((sorted_index[i], sorted_index[i + 1]))
+        if n_targs > 2:
+            bearing_i = bearings[sorted_index[n_targs - 1]]
+            bearing_j = bearings[sorted_index[0]]
+            if sensor.in_same_FOV(bearing_i, bearing_j):
+                feasible_edges.append((sorted_index[n_targs - 1], sorted_index[0]))
+        # now loop through feasible edges and decide whether edge is there or not based on threshold
+        edges = []
+        for edge in feasible_edges:
+            bearing_i = bearings[edge[0]]
+            bearing_j = bearings[edge[1]]
+            prob = get_unresolved_prob_bearing(bearing_i, bearing_j, bearing_res)
+            if prob >= thresh:
+                edges.append(edge)
+
+        most_likely_graph = Graph(n_targs, edges, feasible_edges)
+
+        # now, with measurements (in FOV) and predicted beliefs, apply simulated JPDAM
+        filter_output, predicted_meas = JPDAM_sim.filter_most_likely(most_likely_graph, beliefs, ownship, bearings)
+        self.predicted_meas = predicted_meas
+        # Take filter output and update mean and covariances in
+        targ_num = 0
+        for i in range(self.targ_state.shape[1] // self.y_dim):
+            start_block = targ_num * self.y_dim
+            end_block = start_block + self.y_dim
+            self.Sigma[start_block:end_block, start_block:end_block] = filter_output[i]._cov
+            # dont need to update mean since we have Y_T
+            targ_num += 1
+
+        return None
+
     def filter_cov_JPDA_merged(self, robot, depth, JPDAM_sim):
         # todo: implement
         ownship = self.state
+        thresh = JPDAM_sim.merging_threshold
 
         y_curr = self.targ_state[depth]
         self.targ_state_at_node = y_curr
         beliefs = []
         meas = []
-        for i in range(int(len(self.targ_state) / self.y_dim)):  # loop over number of targets
+        for i in range(self.targ_state.shape[1] // self.y_dim):  # loop over number of targets
             y_targ_predict = y_curr[i * self.y_dim:i * self.y_dim + self.y_dim]
             cov_targ = self.Sigma[i * self.y_dim:i * self.y_dim + self.y_dim,
                        i * self.y_dim:i * self.y_dim + self.y_dim]
@@ -104,6 +172,17 @@ class SearchState:
             A = robot.tmm.targets[i].getJacobian()
             W = robot.tmm.targets[i].getNoise()
             cov_targ_predict = A @ cov_targ @ A.transpose() + W
+
+            beliefs.append(GaussianBelief(y_targ_predict, cov_targ_predict))
+            predicted_meas = robot.sensor.observationModel(ownship, y_targ_predict)
+            if robot.sensor.in_FOV(predicted_meas):
+                meas.append(Measurement(predicted_meas, 0, 1))
+
+        #now, get most likely graph
+
+        # now, with measurements (in FOV) and predicted beliefs, apply simulated JPDAM
+        filter_output = JPDAM_sim.filter(meas, beliefs, ownship)
+
         return None
 
     def filter_cov_JPDA(self, robot, depth, JPDA_sim):
@@ -114,7 +193,7 @@ class SearchState:
         self.targ_state_at_node = y_curr
         beliefs = []
         meas = []
-        for i in range(int(len(self.targ_state)/self.y_dim)): # loop over number of targets
+        for i in range(self.targ_state.shape[1] // self.y_dim): # loop over number of targets
             y_targ_predict = y_curr[i * self.y_dim:i * self.y_dim + self.y_dim]
             cov_targ = self.Sigma[i * self.y_dim:i * self.y_dim + self.y_dim, i * self.y_dim:i * self.y_dim + self.y_dim]
 
@@ -133,7 +212,7 @@ class SearchState:
 
         # Take filter output and update state mean and covariance
         targ_num = 0
-        for i in range(int(len(self.targ_state)/self.y_dim)):
+        for i in range(self.targ_state.shape[1] // self.y_dim):
             start_block = targ_num * self.y_dim
             end_block = start_block + self.y_dim
             self.Sigma[start_block:end_block, start_block:end_block] = filter_output[i]._cov
@@ -235,7 +314,7 @@ class Planner:
 
         S0 = SearchState(x0, Sigma0, y_T, dt=1)
         #S0.cost = 0  # every path starts at this node so cost doesn't matter
-        root = SearchNode(S0, robot, self.cost_function, self.JPDAF_sim)
+        root = SearchNode(S0, robot, self.cost_function, self.JPDAF_sim, self.JPDAFM_sim)
 
         for i in range(T):
             for leaf in root.leaves:
@@ -300,4 +379,3 @@ class Planner:
             json.dump(data, outfile)
 
         return None
-
