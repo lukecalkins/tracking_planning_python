@@ -375,9 +375,9 @@ class JPDAFMerged:
         self._inn_cov_list = []
         self._z_predict_list = []
         self._H_k_list = []
-        z_dim = robot.sensor.z_dim
+        z_dim = self.sensor.z_dim
         y_dim = robot.tmm.targets[0]._y_dim
-        b_sigma = robot.sensor.get_b_sigma()
+        b_sigma = self.sensor.get_b_sigma()
 
         ownship = robot.getState()
         beliefs = self.get_predicted_beliefs(robot)
@@ -386,7 +386,7 @@ class JPDAFMerged:
         z_target_predict = np.array(self._z_predict_list)
 
         #resolution_matrix = self.get_resolution_matrix(beliefs, ownship)
-        graphs = self.get_feasible_graphs(robot, beliefs)
+        graphs = self.get_feasible_graphs(robot, self.sensor, beliefs)
         for graph in graphs:
             graph.build_resolution_update_multipliers()
             graph.build_resolution_update_D_matrices()
@@ -517,7 +517,7 @@ class JPDAFMerged:
 
         return valid_event_mats
 
-    def get_feasible_graphs(self, robot, beliefs):
+    def get_feasible_graphs(self, robot, sensor, beliefs):
         """
         Function to take the target beliefs and produce all feasible graphs for resolution event. In Bearing only case
         there is only one feasible graph per resolution event
@@ -525,7 +525,7 @@ class JPDAFMerged:
         :return: list of graphs. Each graph will contain list of target indices that are grouped in one list (unresolved)
         or by itself in
         """
-        bearings = get_bearings(robot, beliefs)
+        bearings = get_bearings(robot, sensor, beliefs)
         bearings_2pi = bearings + np.pi
         sorted_index = sorted(range(len(bearings_2pi)), key=lambda k: bearings_2pi[k], reverse=True)
         n_targs = len(beliefs)
@@ -965,7 +965,7 @@ def gateMeasurement_wrapped_gate(meas, z_predict, delta):
         else:
             return 1
 
-def get_bearings(robot, beliefs):
+def get_bearings(robot, sensor, beliefs):
     """
     takes target beliefs and returns list of bearings to each target belief state
     :param ownship:
@@ -975,7 +975,7 @@ def get_bearings(robot, beliefs):
     bearings = []
     own_state = robot.getState()
     for i in range(len(beliefs)):
-        bearing = robot.sensor.observationModel(own_state, beliefs[i].getMean())
+        bearing = sensor.observationModel(own_state, beliefs[i].getMean())
         bearings.append(bearing)
 
     return np.array(bearings)

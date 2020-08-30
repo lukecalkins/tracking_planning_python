@@ -52,12 +52,12 @@ if __name__ == '__main__':
         print("planner output", planner_output)
 
         for i in range(len(robots)):
-            #measurements, num_target_seen = robots[i].sensor.senseTargets(robots[i].getState(), target_model.getTargets())
-            #measurements, num_targs_seen = robots[i].sensor.senseTargets_interference_n(robots[i].getState(), targets, proximity)            #print("num targs_seen: ", num_targs_seen)
-            #measurements, num_targets_seen = robots[i].sensor.senseTargets_resolution_model_n(robots[i].getState(), target_model.getTargets(), p.unresolved_resolution)
-            # measurements, num_targets_seen = robots[0].sensor.senseTargets_ambiguity(robots[i].getState(), target_model.getTargets())
-            #measurements, num_targets_seen = robots[i].sensor.senseTargets_FOV(robots[i].getState(), target_model.getTargets())
-            measurements, num_targets_seen = robots[i].sensor.senseTargets_resolution_model_n_FOV(robots[i].getState(), target_model.getTargets(), p.unresolved_resolution)
+            #measurements, num_target_seen = sensor.senseTargets(robots[i].getState(), target_model.getTargets())
+            #measurements, num_targs_seen = sensor.senseTargets_interference_n(robots[i].getState(), targets, proximity)            #print("num targs_seen: ", num_targs_seen)
+            #measurements, num_targets_seen = sensor.senseTargets_resolution_model_n(robots[i].getState(), target_model.getTargets(), p.unresolved_resolution)
+            # measurements, num_targets_seen = sensor.senseTargets_ambiguity(robots[i].getState(), target_model.getTargets())
+            #measurements, num_targets_seen = sensor.senseTargets_FOV(robots[i].getState(), target_model.getTargets())
+            measurements, num_targets_seen = sensor.senseTargets_resolution_model_n_FOV(robots[i].getState(), target_model.getTargets(), p.unresolved_resolution)
             #add_clutter(measurements, p.clutter_density)
 
             #output = KF.MultiTargetFilter(measurements, robots[i], debug=False)
