@@ -291,13 +291,14 @@ class SearchState:
 
 
 class Planner:
-    def __init__(self, actions, cost_function, filter_type, sensor, horizon, JPDAF_sim=None, JPDAFM_sim = None, final_cost=False, dt=1,
+    def __init__(self, actions, cost_function, filter_type, sensor, horizon, info_target_model, JPDAF_sim=None, JPDAFM_sim = None, final_cost=False, dt=1,
                  log_file=None, log_flag=False):
         self.actions = actions
         self.cost_function = cost_function
         self.filter = filter_type
         self.sensor = sensor
         self.horizon = horizon
+        self.info_target_model = info_target_model
         self.dt = dt
         self.log_file = log_file
         self.final_cost = final_cost
@@ -305,19 +306,22 @@ class Planner:
         self.JPDAFM_sim = JPDAFM_sim
         self._log_flag = log_flag
 
-    def planFVI(self, beliefs_model, own_state, debug=False):
+    def planFVI(self, system_belief, own_state, debug=False):
 
         planner_output = []
         x0 = own_state
 
         T = self.horizon
         # predict target state
-        y_T = beliefs_model.predictTargetState(T)  # target predcited T steps into future
-        Sigma0 = beliefs_model.getCovarianceMatrix()  # get initial Sigma at current step
+        #y_T = beliefs_model.predictTargetState(T)  # target predcited T steps into future
+        #Sigma0 = beliefs_model.getCovarianceMatrix()  # get initial Sigma at current step
+
+        y_T = self.info_target_model.predictTargetState(system_belief._mean, T)
+        Sigma0 = system_belief._cov
 
         S0 = SearchState(x0, Sigma0, y_T, dt=1)
         #S0.cost = 0  # every path starts at this node so cost doesn't matter
-        root = SearchNode(S0, beliefs_model, self.sensor, self.cost_function, self.JPDAF_sim, self.JPDAFM_sim)
+        root = SearchNode(S0, self.info_target_model, self.sensor, self.cost_function, self.JPDAF_sim, self.JPDAFM_sim)
 
         for i in range(T):
             for leaf in root.leaves:

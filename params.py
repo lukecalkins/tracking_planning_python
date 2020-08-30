@@ -30,6 +30,7 @@ class Parameters:
             with open(target_config, 'r') as targ_file:
                 targ_node = yaml.load(targ_file, Loader=yaml.FullLoader)
                 self.y_dim = targ_node['targ_dim']
+                self.targ_dim = targ_node['targ_dim']
             planner_config = node['plannerConfig']
             self.samp = node['samp']
             self.Tmax = node['Tmax']
@@ -47,7 +48,7 @@ class Parameters:
             self.robots = self.buildRobots(yaml_file)
             self.sensor = self.buildSensor(sensor_config)
             self.world = self.buildTMM(target_config)
-            self.planner = self.buildPlanner(planner_config)
+            self.planner = self.buildPlanner(planner_config, target_config, self.samp)
             self.estimator = self.buildEstimator()
 
     def write_params_to_file(self, dir):
@@ -79,25 +80,11 @@ class Parameters:
             node = yaml.load(file, Loader=yaml.FullLoader)
             robots_node = node['Robots']
             target_config = node['targetConfig']
+            samp = node['samp']
 
-
-            info_target_model = InfoTargetModel()
-            with open(target_config, 'r') as targ_file:
-                targ_node = yaml.load(targ_file, Loader=yaml.FullLoader)
-                targ_dim = targ_node['targ_dim']
-                IDs = targ_node['IDs']
-                y0 = targ_node['y0']
-                cov_pos = targ_node['cov_pos']
-                cov_vel = targ_node['cov_vel']
-                process_cov_pos = targ_node['process_cov_pos']
-                process_cov_vel = targ_node['process_cov_vel']
-                for i in range(len(y0)):
-                    info_target = InfoTarget(y0[i], process_cov_pos, process_cov_vel, self.samp, IDs[i], targ_dim,
-                                             cov_pos, cov_vel)
-                    info_target_model.addTarget(IDs[i], info_target)
+            info_target_model = build_info_target_model(target_config, samp)
 
             robots = []
-            self.targ_dim = targ_dim
             for robot in robots_node:
                 initial_state = robot['initial_state']
                 """
@@ -161,7 +148,7 @@ class Parameters:
 
         return target_model
 
-    def buildPlanner(self, planner_yaml):
+    def buildPlanner(self, planner_yaml, target_config, samp):
         """
         builds planner object for simulation
         :param planner_yaml: planner yaml file
@@ -198,7 +185,9 @@ class Parameters:
             else:
                 print("Cost function not recognized in initialization")
                 exit()
-            planner = plan.Planner(actions, cost_func, filter_type, self.sensor, self.horizon, JPDAF_simulator, JPDAF_merged_simulator,
+
+            info_target_model = build_info_target_model(target_config, samp)
+            planner = plan.Planner(actions, cost_func, filter_type, self.sensor, self.horizon, info_target_model, JPDAF_simulator, JPDAF_merged_simulator,
                                    log_file=planner_log_file, log_flag=planner_log_flag, final_cost=planner_final_cost)
 
         return planner
@@ -209,3 +198,21 @@ class Parameters:
                         gate_level=self.gate_level, verbose=self.estimator_verbose)
 
         return JPDA
+
+def build_info_target_model(target_config, samp):
+    info_target_model = InfoTargetModel()
+    with open(target_config, 'r') as targ_file:
+        targ_node = yaml.load(targ_file, Loader=yaml.FullLoader)
+        targ_dim = targ_node['targ_dim']
+        IDs = targ_node['IDs']
+        y0 = targ_node['y0']
+        cov_pos = targ_node['cov_pos']
+        cov_vel = targ_node['cov_vel']
+        process_cov_pos = targ_node['process_cov_pos']
+        process_cov_vel = targ_node['process_cov_vel']
+        for i in range(len(y0)):
+            info_target = InfoTarget(y0[i], process_cov_pos, process_cov_vel, samp, IDs[i], targ_dim,
+                                     cov_pos, cov_vel)
+            info_target_model.addTarget(IDs[i], info_target)
+
+        return info_target_model

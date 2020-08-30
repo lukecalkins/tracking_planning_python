@@ -1,4 +1,6 @@
 import numpy as np
+from copy import copy, deepcopy
+from kalmanFilter import GaussianBelief
 
 class Target:
 
@@ -27,7 +29,7 @@ class Target:
         self._state = self._A.dot(self._state) # + random noise drawn
 
     def getState(self):
-        return np.copy(self._state)
+        return deepcopy(self._state)
 
     def getPosition(self):
         return np.copy(self._state[0:2])
@@ -53,7 +55,7 @@ class InfoTarget(Target):
         self.covariance = self.constructNoise(cov_pos_init, cov_vel_init)
 
     def getCovariance(self):
-        return np.copy(self.covariance)
+        return deepcopy(self.covariance)
 
     def predictState(self, steps):
         current = np.copy(self._state)
@@ -199,7 +201,7 @@ class InfoTargetModel(TargetModel):
             index = index + target._y_dim
 
 
-    def predictTargetState(self, T):
+    def predictTargetState(self, mean, T):
         """
         function that will take the sytem of targets stored in the info model and precit T steps into the future
         :param T: Number of timesteps
@@ -207,7 +209,7 @@ class InfoTargetModel(TargetModel):
         """
 
         target_history = []
-        target_state = self.getTargetState()
+        target_state = mean
         A = self.getSystemMatrix()
         for i in range(T + 1):
             target_history.append(target_state)
@@ -215,6 +217,16 @@ class InfoTargetModel(TargetModel):
 
         return np.array(target_history)
 
+    def get_system_belief_copy(self):
+        """
+        returns copy of system (multiple targets) belief (mean and covariance)
+        :return:
+        """
+        mean = self.getTargetState()
+        cov = self.getCovarianceMatrix()
+
+        output = GaussianBelief(mean, cov)
+        return output
 
 
 
