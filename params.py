@@ -18,7 +18,7 @@ class Parameters:
             node = yaml.load(file, Loader=yaml.FullLoader)
             target_config = node['targetConfig']
             robots_node = node['Robots']
-            sensor_config = robots_node[0]['sensorConfig']
+            sensor_config = node['sensorConfig']
             with open(sensor_config, 'r') as sense_file:
                 sense_node = yaml.load(sense_file, Loader=yaml.FullLoader)
                 self.detection_prob = sense_node['detection_prob']
@@ -45,6 +45,7 @@ class Parameters:
             self.num_targs = 0
 
             self.robots = self.buildRobots(yaml_file)
+            self.sensor = self.buildSensor(sensor_config)
             self.world = self.buildTMM(target_config)
             self.planner = self.buildPlanner(planner_config)
             self.estimator = self.buildEstimator()
@@ -59,6 +60,9 @@ class Parameters:
 
     def getRobots(self):
         return self.robots
+
+    def getSensor(self):
+        return self.sensor
 
     def getWorld(self):
         return self.world
@@ -93,9 +97,10 @@ class Parameters:
                     info_target_model.addTarget(IDs[i], info_target)
 
             robots = []
-            self.targ_dom = targ_dim
+            self.targ_dim = targ_dim
             for robot in robots_node:
-                initial_state  = robot['initial_state']
+                initial_state = robot['initial_state']
+                """
                 sensor_config = robot['sensorConfig']
                 with open(sensor_config, 'r') as sense_file:
                     sense_node = yaml.load(sense_file, Loader=yaml.FullLoader)
@@ -106,13 +111,34 @@ class Parameters:
                     sense_b_sigma = sense_node['b_sigma']
                     detection_prob = sense_node['detection_prob']
                     FOV = sense_node['FOV']
+                """
+                    #sensor = BearingSensor(sense_min_range, sense_max_range, sense_min_hang, sense_max_hang,
+                    #                       sense_b_sigma, detection_prob, FOV)
 
-                    sensor = BearingSensor(sense_min_range, sense_max_range, sense_min_hang, sense_max_hang,
-                                           sense_b_sigma, detection_prob, FOV)
-
-                robots.append(Robot(initial_state, sensor, info_target_model))
+                robots.append(Robot(initial_state, info_target_model))
 
         return robots
+
+    def buildSensor(self, sensor_yaml):
+        """
+        build sensor object
+        :param sensor_yaml:
+        :return:
+        """
+        with open(sensor_yaml, 'r') as sense_file:
+            sense_node = yaml.load(sense_file, Loader=yaml.FullLoader)
+            sense_min_range = sense_node['min_range']
+            sense_max_range = sense_node['max_range']
+            sense_min_hang = sense_node['min_hang']
+            sense_max_hang = sense_node['max_hang']
+            sense_b_sigma = sense_node['b_sigma']
+            detection_prob = sense_node['detection_prob']
+            FOV = sense_node['FOV']
+
+            sensor = BearingSensor(sense_min_range, sense_max_range, sense_min_hang, sense_max_hang,
+                                   sense_b_sigma, detection_prob, FOV)
+
+        return sensor
 
     def buildTMM(self, target_yaml):
         """
@@ -155,8 +181,8 @@ class Parameters:
             #actions = [[speed, 0], [speed, speed / turn_radius], [speed, -speed / turn_radius]]
             actions = [[speed, 0]]
 
-            JPDAF_simulator = DAP.JPDAF_simulate(self.robots[0].getSensor(), gate_level=self.gate_level, verbose=False)
-            JPDAF_merged_simulator = DAP.JPDAF_merged_simulate(self.robots[0].getSensor(), self.unresolved_resolution,
+            JPDAF_simulator = DAP.JPDAF_simulate(self.sensor, gate_level=self.gate_level, verbose=False)
+            JPDAF_merged_simulator = DAP.JPDAF_merged_simulate(self.sensor, self.unresolved_resolution,
                                                                self.sequential_resolution_update_flag, FOV=self.fov,
                                                                gate_level=self.gate_level, verbose=False)
 
@@ -172,7 +198,7 @@ class Parameters:
             else:
                 print("Cost function not recognized in initialization")
                 exit()
-            planner = plan.Planner(actions, cost_func, filter_type, JPDAF_simulator, JPDAF_merged_simulator,
+            planner = plan.Planner(actions, cost_func, filter_type, self.sensor, self.horizon, JPDAF_simulator, JPDAF_merged_simulator,
                                    log_file=planner_log_file, log_flag=planner_log_flag, final_cost=planner_final_cost)
 
         return planner

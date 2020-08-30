@@ -27,11 +27,12 @@ if __name__ == '__main__':
     planner_output = []  # only utilized when not running planner
 
     robots = p.getRobots()
+    sensor = p.getSensor()
     planner = p.getPlanner()
     target_model = p.getWorld()
     JPDAF = p.getEstimator()
 
-    JPDAF_merged = DA.JPDAFMerged(robots[0].sensor, p.unresolved_resolution, p.clutter_density,
+    JPDAF_merged = DA.JPDAFMerged(sensor, p.unresolved_resolution, p.clutter_density,
                                   p.sequential_resolution_update_flag,
                                   p.gate_level)
     JPDAF_ambiguity = DA_amb.JPDAF_amb(p.detection_prob, p.clutter_density, p.gate_level)
@@ -45,7 +46,7 @@ if __name__ == '__main__':
 
         if kk % p.n_controls == 0:
             for robot in robots:
-                planner_output, optimal_node = planner.planFVI(robot, p.horizon)
+                planner_output, optimal_node = planner.planFVI(robot)
                 steps_into_plan = 0
 
         print("planner output", planner_output)

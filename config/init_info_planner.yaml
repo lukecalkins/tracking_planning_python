@@ -1,10 +1,10 @@
 ---
 Robots:
 - initial_state: [0, -750, 1.57080]   # pi/2 = 1.57080, pi/4 = 0.7854
-  sensorConfig: config/sensors/bearing.yaml
+#  sensorConfig: config/sensors/bearing.yaml
   dynamicsConfig: config/dynamics/dubins_car.yaml
 
-
+sensorConfig: config/sensors/bearing.yaml
 targetConfig: config/targetModel.yaml
 plannerConfig: config/planner.yaml
 

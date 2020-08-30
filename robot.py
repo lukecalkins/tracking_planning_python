@@ -3,9 +3,9 @@ import numpy as np
 
 class Robot:
 
-    def __init__(self, init_state, sensor, info_target_model):
+    def __init__(self, init_state, info_target_model):
         self._state = init_state
-        self.sensor = sensor
+        #self.sensor = sensor
         self.tmm = info_target_model
 
     #def senseTargets(self):
@@ -20,8 +20,6 @@ class Robot:
     def getState(self):
         return np.copy(self._state)
 
-    def getSensor(self):
-        return self.sensor
 
 
 
