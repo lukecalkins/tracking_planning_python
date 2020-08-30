@@ -362,11 +362,11 @@ class JPDAFMerged:
         self._H_k_list = []
 
 
-    def filter(self, measurements, robot):
+    def filter(self, measurements, robot, own_state):
         """
         fully external functioning JPDAF filter without clutter and with perfect detections
         :param measurements: measurement list
-        :param ownship: own_ship state
+        :param own_state: own_ship state
         :param a targ_predict_beliefs: list of target beliefs (mean, cov) from previous predcited from prevous time step
         :return: a
         """
@@ -379,14 +379,15 @@ class JPDAFMerged:
         y_dim = robot.tmm.targets[0]._y_dim
         b_sigma = self.sensor.get_b_sigma()
 
-        ownship = robot.getState()
+        #ownship = robot.getState()
+
         beliefs = self.get_predicted_beliefs(robot)
         full_belief = self.get_full_predicted_belief(beliefs)
-        H_tilde = self.build_H_tilde(beliefs, ownship, z_dim)
+        H_tilde = self.build_H_tilde(beliefs, own_state, z_dim)
         z_target_predict = np.array(self._z_predict_list)
 
         #resolution_matrix = self.get_resolution_matrix(beliefs, ownship)
-        graphs = self.get_feasible_graphs(robot, self.sensor, beliefs)
+        graphs = self.get_feasible_graphs(own_state, self.sensor, beliefs)
         for graph in graphs:
             graph.build_resolution_update_multipliers()
             graph.build_resolution_update_D_matrices()
@@ -408,7 +409,9 @@ class JPDAFMerged:
         # Now perform moment matching on entire gaussian mixture.
         output = self.full_JPDAF_update(graph_data_association_list, y_dim)
 
-        return output
+        robot.tmm.updateBelief(output)
+
+        return None  # robots internal beliefs updated at end, no return
 
     def full_JPDAF_update(self, graph_data_association_list, y_dim):
         """
@@ -517,7 +520,7 @@ class JPDAFMerged:
 
         return valid_event_mats
 
-    def get_feasible_graphs(self, robot, sensor, beliefs):
+    def get_feasible_graphs(self, own_state, sensor, beliefs):
         """
         Function to take the target beliefs and produce all feasible graphs for resolution event. In Bearing only case
         there is only one feasible graph per resolution event
@@ -525,7 +528,7 @@ class JPDAFMerged:
         :return: list of graphs. Each graph will contain list of target indices that are grouped in one list (unresolved)
         or by itself in
         """
-        bearings = get_bearings(robot, sensor, beliefs)
+        bearings = get_bearings(own_state, sensor, beliefs)
         bearings_2pi = bearings + np.pi
         sorted_index = sorted(range(len(bearings_2pi)), key=lambda k: bearings_2pi[k], reverse=True)
         n_targs = len(beliefs)
@@ -965,7 +968,7 @@ def gateMeasurement_wrapped_gate(meas, z_predict, delta):
         else:
             return 1
 
-def get_bearings(robot, sensor, beliefs):
+def get_bearings(own_state, sensor, beliefs):
     """
     takes target beliefs and returns list of bearings to each target belief state
     :param ownship:
@@ -973,7 +976,7 @@ def get_bearings(robot, sensor, beliefs):
     :return:
     """
     bearings = []
-    own_state = robot.getState()
+    #own_state = robot.getState()
     for i in range(len(beliefs)):
         bearing = sensor.observationModel(own_state, beliefs[i].getMean())
         bearings.append(bearing)

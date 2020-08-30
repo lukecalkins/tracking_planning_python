@@ -174,7 +174,7 @@ class SearchState:
             cov_targ_predict = A @ cov_targ @ A.transpose() + W
 
             beliefs.append(GaussianBelief(y_targ_predict, cov_targ_predict))
-            predicted_meas = robot.sensor.observationModel(ownship, y_targ_predict)
+            predicted_meas = sensor.observationModel(ownship, y_targ_predict)
             if sensor.in_FOV(predicted_meas):
                 meas.append(Measurement(predicted_meas, 0, 1))
 
@@ -305,10 +305,10 @@ class Planner:
         self.JPDAFM_sim = JPDAFM_sim
         self._log_flag = log_flag
 
-    def planFVI(self, robot, debug=False):
+    def planFVI(self, robot, own_state, debug=False):
 
         planner_output = []
-        x0 = robot.getState()
+        x0 = own_state
 
         T = self.horizon
         # predict target state

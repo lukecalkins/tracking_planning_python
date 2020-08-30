@@ -46,7 +46,7 @@ if __name__ == '__main__':
 
         if kk % p.n_controls == 0:
             for robot in robots:
-                planner_output, optimal_node = planner.planFVI(robot)
+                planner_output, optimal_node = planner.planFVI(robot, robot.getState())
                 steps_into_plan = 0
 
         print("planner output", planner_output)
@@ -65,8 +65,8 @@ if __name__ == '__main__':
 
             #JPDAF.filter(measurements, robots[i])
 
-            filter_output = JPDAF_merged.filter(measurements, robots[i])
-            robots[i].tmm.updateBelief(filter_output)
+            filter_output = JPDAF_merged.filter(measurements, robots[i], robots[i].getState())
+            #robots[i].tmm.updateBelief(filter_output)
 
 
         for robot in robots:
