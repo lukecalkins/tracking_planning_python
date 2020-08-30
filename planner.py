@@ -23,10 +23,10 @@ class Search_Node:
 """
 
 class SearchNode(Node):
-    def __init__(self, state, robot, sensor, cost_func, JPDA_sim=None, JPDAM_sim=None, parent=None, action=None):
+    def __init__(self, state, beliefs_model, sensor, cost_func, JPDA_sim=None, JPDAM_sim=None, parent=None, action=None):
         Node.__init__(self, action, parent)
         self.state = state
-        self.robot = robot
+        self.beliefs_model = beliefs_model
         self.sensor = sensor
         self.cost_func = cost_func
         self.action = action
@@ -47,30 +47,30 @@ class SearchNode(Node):
                     exit()
 
     def _make_child_kalman(self, action):
-        child = SearchNode(deepcopy(self.state), self.robot, self.sensor, self.cost_func, JPDA_sim=self.JPDA_sim,
+        child = SearchNode(deepcopy(self.state), self.beliefs_model, self.sensor, self.cost_func, JPDA_sim=self.JPDA_sim,
                            parent=self, action=action)
         child.state.move(action)
         #child.state.inn_cov = []  # reset inn cov to empty
-        child.state.filter_cov(self.robot, self.sensor, child.depth)
+        child.state.filter_cov(self.beliefs_model, self.sensor, child.depth)
         child.state.total_cost = self.state.total_cost + child.state.get_cost(self.cost_func, child.depth)
 
         return child  # caller doesn't actually store it
 
     def _make_child_JPDAF(self, action):
-        child = SearchNode(deepcopy(self.state), self.robot, self.sensor, self.cost_func, JPDA_sim=self.JPDA_sim,
+        child = SearchNode(deepcopy(self.state), self.beliefs_model, self.sensor, self.cost_func, JPDA_sim=self.JPDA_sim,
                            parent=self, action=action)
         child.state.move(action)
         #child.state.inn_cov = []  # reset inn cov to empty
-        child.state.filter_cov_JPDA(self.robot, self.sensor, child.depth, self.JPDA_sim)
+        child.state.filter_cov_JPDA(self.beliefs_model, self.sensor, child.depth, self.JPDA_sim)
         child.state.total_cost = self.state.total_cost + child.state.get_cost(self.cost_func, child.depth)
 
         return child  # caller doesn't actually store it
 
     def _make_child_JPDAF_merged(self, action):
-        child = SearchNode(deepcopy(self.state), self.robot, self.sensor, self.cost_func, JPDAM_sim=self.JPDAM_sim,
+        child = SearchNode(deepcopy(self.state), self.beliefs_model, self.sensor, self.cost_func, JPDAM_sim=self.JPDAM_sim,
                            parent=self, action=action)
         child.state.move(action)
-        child.state.filter_cov_JPDAM_most_likely(self.robot, self.sensor, child.depth, self.JPDAM_sim)
+        child.state.filter_cov_JPDAM_most_likely(self.beliefs_model, self.sensor, child.depth, self.JPDAM_sim)
         child.state.total_cost = self.state.total_cost + child.state.get_cost(self.cost_func, child.depth)
 
         return child  # caller doesn't actually store it.
@@ -92,7 +92,7 @@ class SearchState:
     def move(self, action):
         self.state = propagateOwnshipEuler(self.state, action[0], action[1], self.dt)
 
-    def filter_cov_JPDAM_most_likely(self, robot, sensor, depth, JPDAM_sim):
+    def filter_cov_JPDAM_most_likely(self, beliefs_model, sensor, depth, JPDAM_sim):
         # todo: implement
         ownship = self.state
         thresh = JPDAM_sim.merging_threshold
@@ -107,8 +107,8 @@ class SearchState:
                        i * self.y_dim:i * self.y_dim + self.y_dim]
 
             # already have mean_predict, get cov predict
-            A = robot.tmm.targets[i].getJacobian()
-            W = robot.tmm.targets[i].getNoise()
+            A = beliefs_model.targets[i].getJacobian()
+            W = beliefs_model.targets[i].getNoise()
             cov_targ_predict = A @ cov_targ @ A.transpose() + W
 
             beliefs.append(GaussianBelief(y_targ_predict, cov_targ_predict))
@@ -154,7 +154,7 @@ class SearchState:
 
         return None
 
-    def filter_cov_JPDA_merged(self, robot, sensor, depth, JPDAM_sim):
+    def filter_cov_JPDA_merged(self, beliefs_model, sensor, depth, JPDAM_sim):
         # todo: implement
         ownship = self.state
         thresh = JPDAM_sim.merging_threshold
@@ -169,8 +169,8 @@ class SearchState:
                        i * self.y_dim:i * self.y_dim + self.y_dim]
 
             # already have mean_predict, get cov predict
-            A = robot.tmm.targets[i].getJacobian()
-            W = robot.tmm.targets[i].getNoise()
+            A = beliefs_model.targets[i].getJacobian()
+            W = beliefs_model.targets[i].getNoise()
             cov_targ_predict = A @ cov_targ @ A.transpose() + W
 
             beliefs.append(GaussianBelief(y_targ_predict, cov_targ_predict))
@@ -185,7 +185,7 @@ class SearchState:
 
         return None
 
-    def filter_cov_JPDA(self, robot, sensor, depth, JPDA_sim):
+    def filter_cov_JPDA(self, beliefs_model, sensor, depth, JPDA_sim):
         # first, grab the predicted mean and covariance
         ownship = self.state   # already computed SearhState.move()
 
@@ -198,8 +198,8 @@ class SearchState:
             cov_targ = self.Sigma[i * self.y_dim:i * self.y_dim + self.y_dim, i * self.y_dim:i * self.y_dim + self.y_dim]
 
             #already have mean_predict, get cov predict
-            A = robot.tmm.targets[i].getJacobian()
-            W = robot.tmm.targets[i].getNoise()
+            A = beliefs_model.targets[i].getJacobian()
+            W = beliefs_model.targets[i].getNoise()
             cov_targ_predict = A @ cov_targ @ A.transpose() + W
 
             beliefs.append(GaussianBelief(y_targ_predict, cov_targ_predict))
@@ -221,9 +221,9 @@ class SearchState:
 
         return None
 
-    def filter_cov(self, robot, sensor, depth):
+    def filter_cov(self, beliefs_model, sensor, depth):
         targ_num = 0
-        for target in robot.tmm.targets:
+        for target in beliefs_model.targets:
             start_block = targ_num * self.y_dim
             end_block = start_block + self.y_dim
             A = target.getJacobian()
@@ -305,19 +305,19 @@ class Planner:
         self.JPDAFM_sim = JPDAFM_sim
         self._log_flag = log_flag
 
-    def planFVI(self, robot, own_state, debug=False):
+    def planFVI(self, beliefs_model, own_state, debug=False):
 
         planner_output = []
         x0 = own_state
 
         T = self.horizon
         # predict target state
-        y_T = robot.tmm.predictTargetState(T)  # target predcited T steps into future
-        Sigma0 = robot.tmm.getCovarianceMatrix()  # get initial Sigma at current step
+        y_T = beliefs_model.predictTargetState(T)  # target predcited T steps into future
+        Sigma0 = beliefs_model.getCovarianceMatrix()  # get initial Sigma at current step
 
         S0 = SearchState(x0, Sigma0, y_T, dt=1)
         #S0.cost = 0  # every path starts at this node so cost doesn't matter
-        root = SearchNode(S0, robot, self.sensor, self.cost_function, self.JPDAF_sim, self.JPDAFM_sim)
+        root = SearchNode(S0, beliefs_model, self.sensor, self.cost_function, self.JPDAF_sim, self.JPDAFM_sim)
 
         for i in range(T):
             for leaf in root.leaves:

@@ -806,8 +806,6 @@ class GraphDataAssociation:
                                                                  np.ndarray.flatten(self.C_k_list[i] @ z_target_predict), V)
                 self.measurement_updated_probabilities.append(measurement_likelihood * 1./(FOV ** num_clutter_meas) *
                                                               self.association_probabilities[i])
-            if False:
-                H_caron_adde
 
     def build_measurement_covariance_merged(self, b_sigma, num_target_per_meas):
         """

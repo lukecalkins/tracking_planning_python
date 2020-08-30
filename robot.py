@@ -1,5 +1,5 @@
 import numpy as np
-
+from copy import copy, deepcopy
 
 class Robot:
 
@@ -19,6 +19,13 @@ class Robot:
 
     def getState(self):
         return np.copy(self._state)
+
+    def get_beliefs_model(self):
+        """
+        returns COPY of current robot's info target model
+        :return:
+        """
+
 
 
 

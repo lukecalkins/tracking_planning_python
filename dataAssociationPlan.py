@@ -302,31 +302,6 @@ class JPDAF_merged_simulate:
         self._z_predict_list = []
         self._H_k_list = []
 
-    def filter(self, measurements, targ_predicted_beliefs, ownship):
-        """
-        fully external functioning JPDAF filter without clutter and with perfect detections
-        :param measurements: measurement list
-        :param ownship: own_ship state
-        :param a targ_predict_beliefs: list of target beliefs (mean, cov) from previous predcited from prevous time step
-        :return: a
-        """
-        # reset inn_cov_list, z predict List and H_k list to be empty. Will be populated with innovation covariance
-        # for each target
-        self._inn_cov_list = []
-        self._z_predict_list = []
-        self._H_k_list = []
-        z_dim = self.sensor.z_dim
-        y_dim = targ_predicted_beliefs[0]._mean.shape[0]
-
-        H_tilde = self.build_H_tilde(targ_predicted_beliefs, ownship, z_dim)
-        z_target_predict = np.array(self._z_predict_list)
-
-        graph = self.get_most_likely_graph(ownship, targ_predicted_beliefs, self.sensor)
-        graph.build_resolution_update_multipliers()
-
-
-        return None  # todo: remove
-
     def filter_most_likely(self, graph, beliefs, ownship, bearings):
         """
         performs filter update given the correct merging graph based on thresholding.
@@ -343,6 +318,7 @@ class JPDAF_merged_simulate:
         self._inn_cov_list = []
         self._z_predict_list = []
         self._H_k_list = []
+        b_sigma = self.sensor.get_b_sigma()
 
         visited = set()
         meas = []
@@ -374,7 +350,7 @@ class JPDAF_merged_simulate:
         C_k = self.get_C_k_from_event_no_clutter(Omega)
         H_tilde = self.build_H_tilde(beliefs, ownship, z_dim)
         full_belief = self.get_full_predicted_belief(beliefs)
-        measurement_updated_belief = self.perform_measurement_update_most_likely(full_belief, H_tilde, self.bearing_res,
+        measurement_updated_belief = self.perform_measurement_update_most_likely(full_belief, H_tilde, b_sigma,
                                                                                   meas, self._z_predict_list, C_k, Omega)
         # separate out each target beliefs
         output = []

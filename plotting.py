@@ -224,7 +224,7 @@ class StatePlotter:
 
 
 
-    def plot_state(self, robots, targets, measurements=None, planner_output=None, num_targs_seen=None, masked=False,
+    def plot_state(self, robots, own_state, targets, measurements=None, planner_output=None, num_targs_seen=None, masked=False,
                    robot_size=1, target_size=1, timestep=None, fov=None, max_range=None, plan_node=None):
 
         self.clear_plot()
@@ -235,7 +235,7 @@ class StatePlotter:
         clr_list = ['r', 'b', 'g', 'm', 'y']
 
         for robot in robots:
-            pose = robot.getState()
+            pose = own_state
             self.draw_robot(pose, size=robot_size)
             if self.FOV_flag:
                 self.draw_fov(self.ax, pose, max_range, fov)
