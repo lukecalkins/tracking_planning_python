@@ -312,10 +312,8 @@ class Planner:
         x0 = own_state
 
         T = self.horizon
-        # predict target state
-        #y_T = beliefs_model.predictTargetState(T)  # target predcited T steps into future
-        #Sigma0 = beliefs_model.getCovarianceMatrix()  # get initial Sigma at current step
 
+        #predict target state
         y_T = self.info_target_model.predictTargetState(system_belief._mean, T)
         Sigma0 = system_belief._cov
 
