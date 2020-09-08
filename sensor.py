@@ -401,8 +401,10 @@ class BearingSensor(Sensor):
         meas_list = []
         for i in range(n_targs):
             if i not in visited:
-                connected_targs = merged_graph.get_connected_targets_raw_index(i)
                 visited.add(i)
+                if not self.in_FOV(true_bearings[i]):
+                    continue
+                connected_targs = merged_graph.get_connected_targets_raw_index(i)
                 num_targs_on_meas = 1
                 for k in range(len(connected_targs)):
                     visited.add(connected_targs[k])

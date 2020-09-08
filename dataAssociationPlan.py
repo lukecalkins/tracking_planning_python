@@ -380,12 +380,12 @@ class JPDAF_merged_simulate:
         """
 
         if C_k is None:
-            print("Using prediction only")
+            #print("Using prediction only")
             return full_belief
         #if True:
             #return full_belief
         else:
-            print("using measurement update")
+            #print("using measurement update")
             H_caron = C_k @ H_tilde
             Z_k_target, num_target_per_meas = self.get_target_generated_measurements_no_clutter(measurements, Omega)
             V = self.build_measurement_covariance_merged(b_sigma, num_target_per_meas)

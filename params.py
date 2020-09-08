@@ -165,8 +165,8 @@ class Parameters:
             filter_type = plan_node['filter_type']
 
             # list actions available to vehicle for planning (speed, turn_rate) todo: configure this in the planner yaml
-            #actions = [[speed, 0], [speed, speed / turn_radius], [speed, -speed / turn_radius]]
-            actions = [[speed, 0]]
+            actions = [[speed, 0], [speed, speed / turn_radius], [speed, -speed / turn_radius]]
+            #actions = [[speed, 0]]
 
             JPDAF_simulator = DAP.JPDAF_simulate(self.sensor, gate_level=self.gate_level, verbose=False)
             JPDAF_merged_simulator = DAP.JPDAF_merged_simulate(self.sensor, self.unresolved_resolution,

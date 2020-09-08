@@ -10,14 +10,14 @@ plannerConfig: config/planner.yaml
 
 Tmax: 90
 samp: 1.0
-random_seed: 5
-map_min: [-1000, -1000]
-map_max: [1000, 1000]
+random_seed: 1
+map_min: [-1200, -1200]
+map_max: [1200, 1200]
 
 # Estimator/planner info
 clutter_density: 0.03183  # 3.183 = 20 per 360 degrees ~ 1 every 18 degrees
 gate_level: 0.99
 estimator_verbose: False
-horizon: 3  # planning horizon
-n_controls: 3  # Re-planning time
+horizon: 10  # planning horizon
+n_controls: 10  # Re-planning time
 sequential_resolution_update_flag: 1  # 0 if resolution update should be done in one step

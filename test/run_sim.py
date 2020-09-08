@@ -1,13 +1,5 @@
-from robot import *
-import numpy as np
 from plotting import *
-from target import *
-from sensor import *
-import pdb
-import kalmanFilter as KF
 import dataAssociation as DA
-import dataAssociationPlan as DAP
-import planner as plan
 from cost_function import *
 from params import Parameters
 import dataAssociation_ambiguity as DA_amb
@@ -50,7 +42,7 @@ if __name__ == '__main__':
             #measurements, num_target_seen = sensor.senseTargets(robots[i].getState(), target_model.getTargets())
             #measurements, num_targs_seen = sensor.senseTargets_interference_n(robots[i].getState(), targets, proximity)            #print("num targs_seen: ", num_targs_seen)
             #measurements, num_targets_seen = sensor.senseTargets_resolution_model_n(robots[i].getState(), target_model.getTargets(), p.unresolved_resolution)
-            # measurements, num_targets_seen = sensor.senseTargets_ambiguity(robots[i].getState(), target_model.getTargets())
+            #measurements, num_targets_seen = sensor.senseTargets_ambiguity(robots[i].getState(), target_model.getTargets())
             #measurements, num_targets_seen = sensor.senseTargets_FOV(robots[i].getState(), target_model.getTargets())
             measurements, num_targets_seen = sensor.senseTargets_resolution_model_n_FOV(robots[i].getState(), target_model.getTargets(), p.unresolved_resolution)
             #add_clutter(measurements, p.clutter_density)
@@ -94,8 +86,9 @@ if __name__ == '__main__':
 
         print("Timestep: ", kk)
 
-    filename = 'planning/merged/2_targ/JPDAF_merged_FOV_total_cost_test_modular'
-    #filename = 'planning/JPDAF/4_targ/4_targ_no_plan_masked'
+    filename = 'planning/merged/3_targ/JPDAF_merged_FOV_total_cost_10_steps_config_3'
+    filename = filename + '_seed_' + str(p.random_seed)
     plotter.save_video(filename=filename, fps=5)
+
     #plotter.save_track_stats(filename=filename)
     #track_stats_plotter.save_video(filename='planning/JPDAF/test/2_targ_FVI_log_det_kalman_speed_5_2_stats', fps=5)
