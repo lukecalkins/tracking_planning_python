@@ -7,8 +7,10 @@ import dataAssociation_ambiguity as DA_amb
 
 if __name__ == '__main__':
 
-    yaml_file = 'config/init_info_planner.yaml'
-    p = Parameters(yaml_file)
+    #yaml_file = 'config/init_info_planner.yaml'
+    working_directory = '/Users/william.calkins/Documents/Research/Tracking/python/tracking_lib'
+
+    p = Parameters(working_directory)
 
     map_min = p.map_min
     map_max = p.map_max

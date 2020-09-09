@@ -11,27 +11,27 @@ from shutil import copyfile
 
 class Parameters:
 
-    def __init__(self, yaml_file):
+    def __init__(self, working_directory):
 
-        self.yaml_file = yaml_file
-        with open(yaml_file, 'r') as file:
-            node = yaml.load(file, Loader=yaml.FullLoader)
-            target_config = node['targetConfig']
-            robots_node = node['Robots']
-            sensor_config = node['sensorConfig']
-            with open(sensor_config, 'r') as sense_file:
-                sense_node = yaml.load(sense_file, Loader=yaml.FullLoader)
+        self.working_directory = working_directory
+        self.yaml_file = os.path.join(self.working_directory, 'config/init_info_planner.yaml')
+        with open(self.yaml_file, 'r') as file:
+            node = yaml.load(file)
+            self.target_config = os.path.join(self.working_directory, node['targetConfig'])
+            self.sensor_config = os.path.join(self.working_directory, node['sensorConfig'])
+            with open(self.sensor_config, 'r') as sense_file:
+                sense_node = yaml.load(sense_file)
                 self.detection_prob = sense_node['detection_prob']
                 self.unresolved_resolution = sense_node['unresolved_resolution']
                 self.masking_proximity = sense_node['masking_proximity']
                 self.fov = sense_node['FOV']
                 self.max_range = sense_node['max_range']
                 self.min_range = sense_node['min_range']
-            with open(target_config, 'r') as targ_file:
-                targ_node = yaml.load(targ_file, Loader=yaml.FullLoader)
+            with open(self.target_config, 'r') as targ_file:
+                targ_node = yaml.load(targ_file)
                 self.y_dim = targ_node['targ_dim']
                 self.targ_dim = targ_node['targ_dim']
-            planner_config = node['plannerConfig']
+            self.planner_config = os.path.join(self.working_directory, node['plannerConfig'])
             self.samp = node['samp']
             self.Tmax = node['Tmax']
             self.random_seed = node['random_seed']
@@ -45,10 +45,10 @@ class Parameters:
             self.sequential_resolution_update_flag = node['sequential_resolution_update_flag']
             self.num_targs = 0
 
-            self.robots = self.buildRobots(yaml_file)
-            self.sensor = self.buildSensor(sensor_config)
-            self.world = self.buildTMM(target_config)
-            self.planner = self.buildPlanner(planner_config, target_config, self.samp)
+            self.robots = self.buildRobots(self.yaml_file)
+            self.sensor = self.buildSensor(self.sensor_config)
+            self.world = self.buildTMM(self.target_config)
+            self.planner = self.buildPlanner(self.planner_config, self.target_config, self.samp)
             self.estimator = self.buildEstimator()
 
     def write_params_to_file(self, dir):
@@ -77,7 +77,7 @@ class Parameters:
     def buildRobots(self, yaml_file):
 
         with open(yaml_file, 'r') as file:
-            node = yaml.load(file, Loader=yaml.FullLoader)
+            node = yaml.load(file)
             robots_node = node['Robots']
             target_config = node['targetConfig']
             samp = node['samp']
@@ -113,7 +113,7 @@ class Parameters:
         :return:
         """
         with open(sensor_yaml, 'r') as sense_file:
-            sense_node = yaml.load(sense_file, Loader=yaml.FullLoader)
+            sense_node = yaml.load(sense_file)
             sense_min_range = sense_node['min_range']
             sense_max_range = sense_node['max_range']
             sense_min_hang = sense_node['min_hang']
@@ -135,7 +135,7 @@ class Parameters:
         """
         target_model = TargetModel([self.map_min, self.map_max])
         with open(target_yaml, 'r') as targ_file:
-            targ_node  = yaml.load(targ_file, Loader=yaml.FullLoader)
+            targ_node  = yaml.load(targ_file)
             targ_dim = targ_node['targ_dim']
             IDs = targ_node['IDs']
             y0 = targ_node['y0']
@@ -155,7 +155,7 @@ class Parameters:
         :return:
         """
         with open(planner_yaml, 'r') as plan_file:
-            plan_node = yaml.load(plan_file, Loader=yaml.FullLoader)
+            plan_node = yaml.load(plan_file)
             planner_log_flag = plan_node['log_flag']
             planner_log_file = plan_node['log_file']
             planner_final_cost = plan_node['final_cost']
@@ -202,7 +202,7 @@ class Parameters:
 def build_info_target_model(target_config, samp):
     info_target_model = InfoTargetModel()
     with open(target_config, 'r') as targ_file:
-        targ_node = yaml.load(targ_file, Loader=yaml.FullLoader)
+        targ_node = yaml.load(targ_file)
         targ_dim = targ_node['targ_dim']
         IDs = targ_node['IDs']
         y0 = targ_node['y0']
