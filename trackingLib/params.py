@@ -1,11 +1,11 @@
 import yaml
-from target import *
-from sensor import BearingSensor
-from robot import Robot
-import dataAssociation as DA
-import dataAssociationPlan as DAP
-import planner as plan
-import cost_function as cf
+from trackingLib.target import *
+from trackingLib.sensor import BearingSensor
+from trackingLib.robot import Robot
+import trackingLib.dataAssociation as DA
+import trackingLib.dataAssociationPlan as DAP
+import trackingLib.planner as plan
+import trackingLib.cost_function as cf
 import sys, os
 from shutil import copyfile
 

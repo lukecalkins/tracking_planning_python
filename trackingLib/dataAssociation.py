@@ -1,12 +1,12 @@
 import itertools as IT
 import numpy as np
-from utils import restrict_angle, kron_delta
-from sensor import Measurement
-from kalmanFilter import GaussianBelief, KalmanFilterMeasurementUpdate
+from trackingLib.utils import restrict_angle, kron_delta
+from trackingLib.sensor import Measurement
+from trackingLib.kalmanFilter import GaussianBelief, KalmanFilterMeasurementUpdate
 from scipy.stats import poisson, multivariate_normal, norm
 from scipy.linalg import sqrtm
 from math import factorial
-from graph import Graph, get_pi_i_j
+from trackingLib.graph import Graph, get_pi_i_j
 
 sqrt = np.sqrt
 

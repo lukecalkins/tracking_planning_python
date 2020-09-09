@@ -1,8 +1,8 @@
-from plotting import *
-import dataAssociation as DA
-from cost_function import *
-from params import Parameters
-import dataAssociation_ambiguity as DA_amb
+from trackingLib.plotting import *
+import trackingLib.dataAssociation as DA
+from trackingLib.cost_function import *
+from trackingLib.params import Parameters
+import trackingLib.dataAssociation_ambiguity as DA_amb
 
 
 if __name__ == '__main__':

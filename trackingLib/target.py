@@ -1,6 +1,6 @@
 import numpy as np
 from copy import copy, deepcopy
-from kalmanFilter import GaussianBelief
+from trackingLib.kalmanFilter import GaussianBelief
 
 class Target:
 

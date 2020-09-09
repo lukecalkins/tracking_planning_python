@@ -1,8 +1,8 @@
 import numpy as np
-from utils import restrict_angle
+from trackingLib.utils import restrict_angle
 from copy import copy
 import sys, os
-from graph import Graph
+from trackingLib.graph import Graph
 
 class Measurement:
     def __init__(self, z, ID, size):
