@@ -6,7 +6,7 @@ import dataAssociation as DA
 import dataAssociationPlan as DAP
 import planner as plan
 import cost_function as cf
-import sys
+import sys, os
 from shutil import copyfile
 
 class Parameters:

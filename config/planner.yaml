@@ -5,7 +5,7 @@ cost: log_det
 #cost: max_eig
 #cost: gate_cost
 #cost: delta_bearing
-final_cost: False
+final_cost: True
 
 # action parameters
 speed: 10.0

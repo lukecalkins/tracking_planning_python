@@ -82,11 +82,12 @@ if __name__ == '__main__':
                            max_range=p.max_range, plan_node=curr_node)
 
         #track_stats_plotter.plot_stats(robot.tmm.getCovarianceMatrix(), robot.tmm.getTargetState(), targets)
-        plt.pause(0.1)
+        #plt.pause(0.1)
 
         print("Timestep: ", kk)
 
-    filename = 'planning/merged/3_targ/JPDAF_merged_FOV_total_cost_10_steps_config_3'
+    #filename = 'planning/merged/2_targ/JPDAF_merged_FOV_final_cost_10_steps_config_2'
+    filename = 'planning/merged/2_targ/test_36'
     filename = filename + '_seed_' + str(p.random_seed)
     plotter.save_video(filename=filename, fps=5)
 
