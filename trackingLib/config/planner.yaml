@@ -1,11 +1,11 @@
 ---
 # Planner configuration for forward value iteration
-cost: log_det
+#cost: log_det
 #cost: log_det_plus_SD
-#cost: max_eig
+cost: max_eig
 #cost: gate_cost
 #cost: delta_bearing
-final_cost: True
+final_cost: False
 
 # action parameters
 speed: 10.0

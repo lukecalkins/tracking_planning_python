@@ -7,6 +7,7 @@ from scipy.stats import poisson, multivariate_normal, norm
 from scipy.linalg import sqrtm
 from math import factorial
 from trackingLib.graph import Graph, get_pi_i_j
+import time
 
 sqrt = np.sqrt
 
@@ -15,7 +16,7 @@ from collections import deque
 
 class JPDAF:
 
-    def __init__(self, detection_prob, clutter_density, gate_level=0.99, verbose = False):
+    def __init__(self, detection_prob, clutter_density, gate_level=0.99, verbose=False):
         self._detection_prob = detection_prob
         self._gate_level = gate_level
         self._verbose = verbose
@@ -349,7 +350,7 @@ class JPDAF:
 class JPDAFMerged:
 
     def __init__(self, sensor, unresolved_resolution, clutter_density, sequential_resolution_update_flag,
-                 gate_level=0.99, FOV=2*np.pi, verbose=False):
+                 gate_level=0.99, FOV=2*np.pi, simulated_time_flag=True, verbose=False):
         self.sensor = sensor
         self.bearing_res = unresolved_resolution
         self._clutter_density = clutter_density
@@ -360,6 +361,10 @@ class JPDAFMerged:
         self._inn_cov_list = []   # each iteration, this will be populated with the innovation covariance of each target
         self._z_predict_list = []
         self._H_k_list = []
+        self.tracking_iterations = 0
+        self.curr_time = time.time()
+        self.simulated_time = simulated_time_flag
+
 
 
     def filter(self, measurements, robot, own_state):
@@ -379,9 +384,17 @@ class JPDAFMerged:
         y_dim = robot.tmm.targets[0]._y_dim
         b_sigma = self.sensor.get_b_sigma()
 
-        #ownship = robot.getState()
 
-        beliefs = self.get_predicted_beliefs(robot)
+        if self.simulated_time:
+            dt = robot.tmm.samp
+            print("dt: ", dt)
+        else:
+            current_time = time.time()
+            dt = current_time - self.curr_time
+            print("dt: ", dt)
+            self.curr_time = current_time
+
+        beliefs = self.get_predicted_beliefs(robot, dt)
         full_belief = self.get_full_predicted_belief(beliefs)
         H_tilde = self.build_H_tilde(beliefs, own_state, z_dim)
         z_target_predict = np.array(self._z_predict_list)
@@ -615,11 +628,12 @@ class JPDAFMerged:
 
         return system_belief
 
-    def get_predicted_beliefs(self, robot):
+    def get_predicted_beliefs(self, robot, dt):
         """
         function that will take targets from the robot target model and generate predicted mean and covariance for the
         current time step
         :param robot: robot object
+        :param dt: time since last filter called, used for target motion model
         :return: list of Gaussian beliefs (mean and cov)
         """
 
@@ -628,8 +642,8 @@ class JPDAFMerged:
             target = robot.tmm.targets[i]
             y_targ_belief = target.getState()
             cov_targ_belief = target.getCovariance()
-            A = target.getJacobian()
-            W = target.getNoise()
+            A = target.getJacobian(dt)
+            W = target.getNoise(dt)
             y_targ_predict = A @ y_targ_belief
             cov_targ_predict = A @ cov_targ_belief @ A.transpose() + W
             predicted_belief = GaussianBelief(y_targ_predict, cov_targ_predict)

@@ -4,12 +4,15 @@ from trackingLib.kalmanFilter import GaussianBelief
 
 class Target:
 
-    def __init__(self, state_init, cov_pos, cov_vel, samp, ID, y_dim):
+    def __init__(self, state_init, cov_pos, cov_vel, samp, ID, y_dim, process_noise):
         self._A = self.constructDynamics(samp)
-        self._W = self.constructNoise(cov_pos, cov_vel)
+        #self._W = self.constructNoise(cov_pos, cov_vel)
+        self._W = self.construct_process_noise_covariance(samp, process_noise)
         self._state = np.array([state_init]).transpose()  # store as column vector
         self._ID = ID
         self._y_dim = y_dim
+        self.samp = samp
+        self.process_noise = process_noise
 
     def constructDynamics(self, samp):
 
@@ -23,6 +26,24 @@ class Target:
         noise[0:2, 0:2] = cov_pos * np.eye(2)
         noise[2:4, 2:4] = cov_vel * np.eye(2)
         return noise
+
+    def construct_process_noise_covariance(self, samp, process_noise):
+        """
+        based on random acceleration disturbance
+        :param q0: acceleration
+        :return:
+        """
+        noise = np.zeros((4, 4))
+        noise[0, 0] = 1/4 * samp ** 4
+        noise[0, 2] = 1/2 * samp ** 3
+        noise[1, 1] = 1/4 * samp ** 4
+        noise[1, 3] = 1/2 * samp ** 3
+        noise[2, 0] = 1/2 * samp ** 3
+        noise[2, 2] = samp ** 2
+        noise[3, 1] = 1/2 * samp ** 3
+        noise[3, 3] = samp ** 2
+
+        return process_noise * noise
 
     def forwardSimulate(self, steps):
 
@@ -40,19 +61,26 @@ class Target:
     def getID(self):
         return self._ID
 
-    def getJacobian(self):
-        return np.copy(self._A)
+    def getJacobian(self, dt=None):
+        #return np.copy(self._A)
+        if dt is None:
+            dt = self.samp
+        return self.constructDynamics(dt)
 
-    def getNoise(self):
-        return np.copy(self._W)
+    def getNoise(self, dt=None):
+        #return np.copy(self._W)
+        if dt is None:
+            dt = self.samp
+        return self.construct_process_noise_covariance(dt, self.process_noise)
 
 ##############################################################
 
 class InfoTarget(Target):
 
-    def __init__(self, state_init, cov_pos, cov_vel, samp, ID, y_dim, cov_pos_init, cov_vel_init):
-        Target.__init__(self, state_init, cov_pos, cov_vel, samp, ID, y_dim)
+    def __init__(self, state_init, cov_pos, cov_vel, process_noise, samp, ID, y_dim, cov_pos_init, cov_vel_init):
+        Target.__init__(self, state_init, cov_pos, cov_vel, samp, ID, y_dim, process_noise)
         self.covariance = self.constructNoise(cov_pos_init, cov_vel_init)
+
 
     def getCovariance(self):
         return deepcopy(self.covariance)
@@ -161,11 +189,16 @@ class InfoTargetModel(TargetModel):
 
     def __init__(self):
         TargetModel.__init__(self)
+        self.samp = None  # will initialize after adding first target
 
     def addTarget(self, ID, infoTarget):
+        if not self.targets:
+            self.samp = infoTarget.samp
         self.targets.append(infoTarget)
         self.targetIDs.append(ID)
         self.target_dim += infoTarget._y_dim
+
+
 
     def getCovarianceMatrix(self):
 

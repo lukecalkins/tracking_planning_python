@@ -13,3 +13,4 @@ cov_pos: 10000  # prior covariance in each
 cov_vel: 25
 process_cov_pos: 5  # covariance in the target motion model
 process_cov_vel: 0.1
+process_noise: 0.5  # constant used as multiplier in process noise covariance

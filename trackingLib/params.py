@@ -43,6 +43,7 @@ class Parameters:
             self.clutter_density = node['clutter_density']
             self.estimator_verbose = node['estimator_verbose']
             self.sequential_resolution_update_flag = node['sequential_resolution_update_flag']
+            self.simulated_time_flag = node['simulated_time_flag']
             self.num_targs = 0
 
             self.robots = self.buildRobots(self.yaml_file)
@@ -79,7 +80,7 @@ class Parameters:
         with open(yaml_file, 'r') as file:
             node = yaml.load(file)
             robots_node = node['Robots']
-            target_config = node['targetConfig']
+            target_config = os.path.join(self.working_directory, node['targetConfig'])
             samp = node['samp']
 
             info_target_model = build_info_target_model(target_config, samp)
@@ -141,8 +142,9 @@ class Parameters:
             y0 = targ_node['y0']
             cov_pos = targ_node['cov_pos']
             cov_vel = targ_node['cov_vel']
+            process_noise = targ_node['process_noise']
             for i in range(len(y0)):
-                target = Target(y0[i], cov_pos, cov_vel, self.samp, IDs[i], targ_dim)
+                target = Target(y0[i], cov_pos, cov_vel, self.samp, IDs[i], targ_dim, process_noise)
                 target_model.addTarget(IDs[i], target)
                 self.num_targs += 1
 
@@ -210,8 +212,9 @@ def build_info_target_model(target_config, samp):
         cov_vel = targ_node['cov_vel']
         process_cov_pos = targ_node['process_cov_pos']
         process_cov_vel = targ_node['process_cov_vel']
+        process_noise = targ_node['process_noise']
         for i in range(len(y0)):
-            info_target = InfoTarget(y0[i], process_cov_pos, process_cov_vel, samp, IDs[i], targ_dim,
+            info_target = InfoTarget(y0[i], process_cov_pos, process_cov_vel, process_noise, samp, IDs[i], targ_dim,
                                      cov_pos, cov_vel)
             info_target_model.addTarget(IDs[i], info_target)
 

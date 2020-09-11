@@ -10,7 +10,7 @@ plannerConfig: config/planner.yaml
 
 Tmax: 90
 samp: 1.0
-random_seed: 1
+random_seed: 2
 map_min: [-1200, -1200]
 map_max: [1200, 1200]
 
@@ -21,3 +21,6 @@ estimator_verbose: False
 horizon: 5  # planning horizon
 n_controls: 5  # Re-planning time
 sequential_resolution_update_flag: 1  # 0 if resolution update should be done in one step
+
+# Simulation vs real time
+simulated_time_flag: False

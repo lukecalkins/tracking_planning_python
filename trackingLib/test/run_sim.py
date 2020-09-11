@@ -7,8 +7,8 @@ import trackingLib.dataAssociation_ambiguity as DA_amb
 
 if __name__ == '__main__':
 
-    #yaml_file = 'config/init_info_planner.yaml'
-    working_directory = '/Users/william.calkins/Documents/Research/Tracking/python/tracking_lib'
+    # point to file where config folder is locatedß
+    working_directory = '/Users/william.calkins/Documents/Research/Tracking/python/tracking_lib/trackingLib'
 
     p = Parameters(working_directory)
 
@@ -28,17 +28,18 @@ if __name__ == '__main__':
 
     JPDAF_merged = DA.JPDAFMerged(sensor, p.unresolved_resolution, p.clutter_density,
                                   p.sequential_resolution_update_flag,
-                                  p.gate_level)
+                                  p.gate_level, simulated_time_flag=p.simulated_time_flag)
     JPDAF_ambiguity = DA_amb.JPDAF_amb(p.detection_prob, p.clutter_density, p.gate_level)
 
     np.random.seed(p.random_seed)
 
     # Main Loop
     for kk in range(p.Tmax):
-        #print('True     : ', targets[0].getState())
-        #print('Estimated: ', robot.tmm.targets[100].getState())
+
+        # call plotter before targets robot move to get initial state
 
 
+        target_model.forwardSimulate()
 
         for i in range(len(robots)):
             #measurements, num_target_seen = sensor.senseTargets(robots[i].getState(), target_model.getTargets())
@@ -75,11 +76,8 @@ if __name__ == '__main__':
                 for i in range(p.horizon - steps_into_plan):
                     curr_node = curr_node.parent
 
-
-
-        target_model.forwardSimulate()
-
-        plotter.plot_state(robots, robots[0].getState(), target_model.getTargets(), measurements, num_targs_seen=num_targets_seen, timestep=kk,
+        plotter.plot_state(robots, robots[0].getState(), target_model.getTargets(), measurements,
+                           num_targs_seen=num_targets_seen, timestep=kk,
                            planner_output=planner_output, robot_size=50, target_size=10, fov=p.fov,
                            max_range=p.max_range, plan_node=curr_node)
 
@@ -89,7 +87,7 @@ if __name__ == '__main__':
         print("Timestep: ", kk)
 
     #filename = 'planning/merged/2_targ/JPDAF_merged_FOV_final_cost_10_steps_config_2'
-    filename = 'planning/merged/2_targ/test_36'
+    filename = 'planning/merged/2_targ/test_process_noise'
     filename = filename + '_seed_' + str(p.random_seed)
     plotter.save_video(filename=filename, fps=5)
 
