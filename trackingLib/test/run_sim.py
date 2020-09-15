@@ -16,7 +16,7 @@ if __name__ == '__main__':
     map_max = p.map_max
     title = "Kalman Filter test"
     plotter = StatePlotter(map_min, map_max, title, video=True, track_stats_flag=False, FOV_flag=True,
-                           meas_plot_flag=True, plan_plot_flag=True)
+                           meas_plot_flag=True, plan_plot_flag=True, )
 
     planner_output = []  # only utilized when not running planner
 

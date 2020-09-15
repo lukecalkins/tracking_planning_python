@@ -10,6 +10,7 @@ import imageio
 # 2D Plotting Tools
 
 import matplotlib
+import sys, os
 
 matplotlib.use('TkAgg')
 from matplotlib import pyplot as plt
@@ -25,9 +26,9 @@ from trackingLib.utils import *
 class StatePlotter:
 
     def __init__(self, mapmin, mapmax, title, plotNum=1, video=False, track_stats_flag=False, meas_plot_flag=False,
-                 FOV_flag=False, plan_plot_flag=False):
+                 FOV_flag=False, plan_plot_flag=False, working_directory=None):
 
-        self.fig = plt.figure(plotNum, figsize=(8, 8))
+        self.fig = plt.figure(plotNum, figsize=(16, 8))
         self.mapmin = mapmin
         self.mapmax = mapmax
         self.title = title
@@ -40,6 +41,7 @@ class StatePlotter:
         self.meas_plot_flag = meas_plot_flag
         self.FOV_flag = FOV_flag
         self.plan_plot_flag = plan_plot_flag
+        self.working_directory = working_directory
         plt.ion()
 
     def draw_env(self):
@@ -224,7 +226,7 @@ class StatePlotter:
 
 
 
-    def plot_state(self, robots, own_state, targets, measurements=None, planner_output=None, num_targs_seen=None, masked=False,
+    def plot_state(self, robots, own_state, targets=None, measurements=None, planner_output=None, num_targs_seen=None, masked=False,
                    robot_size=1, target_size=1, timestep=None, fov=None, max_range=None, plan_node=None):
 
         self.clear_plot()
@@ -255,19 +257,19 @@ class StatePlotter:
                 self.draw_measurements(measurements)
 
         target_ndx = 0
-        for target in targets:
-            target_state = target.getState()
-            self.draw_target(target_state, clr=clr_list[target_ndx], size=target_size)
-            target_ndx += 1
+        if targets:
+            for target in targets:
+                target_state = target.getState()
+                self.draw_target(target_state, clr=clr_list[target_ndx], size=target_size)
+                target_ndx += 1
 
         if self.track_stats:
             self.draw_mse_lds_curves(robots, targets)
 
-
-
         plt.draw()
         #plt.tight_layout()
         if self.video:
+            plt.tight_layout()
             self.fig.canvas.draw()
             image = np.frombuffer(self.fig.canvas.tostring_rgb(), dtype='uint8')
             image = image.reshape(self.fig.canvas.get_width_height()[::-1] + (3,))
@@ -281,7 +283,9 @@ class StatePlotter:
         :return:
         """
         kwargs_write = {'fps': fps, 'quantizer': 'nq'}
-        imageio.mimsave('results/videos/' + filename + '.mp4', self.images, fps=fps)
+        file_dir = os.path.join(self.working_directory, 'results/videos/')
+        full_name = os.path.join(file_dir, filename)
+        imageio.mimsave(full_name + '.mp4', self.images, fps=fps)
 
     def save_track_stats(self, filename):
         np.savez('results/videos/' + filename, MSE=self.MSE_list, log_det_Sigma=self.log_det_Sigma_list)

@@ -59,3 +59,28 @@ def draw_cov(ax, mean, cov, confidence, clr='r'):
     a = np.matmul(Q, np.array([np.cos(t), np.sin(t)]))
     b = 1
     ax.plot(a[0, :] + mean[0], a[1, :] + mean[1], clr)
+
+
+def get_custom_trajectory(y0, T, dt):
+    """
+    create an array of target positions
+    :param y0: initial position
+    :param T: number of time steps
+    :param dt: elapsed time between steps.
+    :return:
+    """
+    targ_state_list = []
+    stationary_time = 5
+    A = np.eye(4)
+    A[0, 2] = dt
+    A[1, 3] = dt
+    curr_state = np.copy(y0)
+    for i in range(T):
+        if i < stationary_time:
+            targ_state_list.append(y0)
+        else:
+            next_state = A @ curr_state
+            targ_state_list.append(next_state)
+            curr_state = next_state
+
+    return targ_state_list

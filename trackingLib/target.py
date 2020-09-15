@@ -13,6 +13,7 @@ class Target:
         self._y_dim = y_dim
         self.samp = samp
         self.process_noise = process_noise
+        self.trajectory = []
 
     def constructDynamics(self, samp):
 
@@ -48,6 +49,12 @@ class Target:
     def forwardSimulate(self, steps):
 
         self._state = self._A.dot(self._state) # + random noise drawn
+
+    def add_fixed_trajectory(self, traj):
+        self.trajectory = traj
+
+    def forward_simulate_fixed_trajectory(self, time_step):
+        self._state = self.trajectory[time_step]
 
     def getState(self):
         return deepcopy(self._state)
@@ -182,6 +189,9 @@ class TargetModel:
             elif target.getPosition()[0] >= self.map_coord[1][0] or target.getPosition()[1] >= self.map_coord[1][1]:
                 target._state[2:4] = -1 * target._state[2:4]
 
+    def forwardSimulate_fixed_trajectory(self, time_step):
+        for target in self.targets:
+            target.forward_simulate_fixed_trajectory(time_step)
 
 ##############################################################
 

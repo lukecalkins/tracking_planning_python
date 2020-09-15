@@ -8,6 +8,7 @@ from scipy.linalg import sqrtm
 from math import factorial
 from trackingLib.graph import Graph, get_pi_i_j
 import time
+import json
 
 sqrt = np.sqrt
 
@@ -350,7 +351,7 @@ class JPDAF:
 class JPDAFMerged:
 
     def __init__(self, sensor, unresolved_resolution, clutter_density, sequential_resolution_update_flag,
-                 gate_level=0.99, FOV=2*np.pi, simulated_time_flag=True, verbose=False):
+                 gate_level=0.99, FOV=2*np.pi, simulated_time_flag=True, log=False, verbose=False):
         self.sensor = sensor
         self.bearing_res = unresolved_resolution
         self._clutter_density = clutter_density
@@ -364,8 +365,9 @@ class JPDAFMerged:
         self.tracking_iterations = 0
         self.curr_time = time.time()
         self.simulated_time = simulated_time_flag
-
-
+        self.log = log
+        if self.log:
+            self.json_log = {}
 
     def filter(self, measurements, robot, own_state):
         """
@@ -387,11 +389,11 @@ class JPDAFMerged:
 
         if self.simulated_time:
             dt = robot.tmm.samp
-            print("dt: ", dt)
+            print("Iteration ", self.tracking_iterations, ", dt: ", dt)
         else:
             current_time = time.time()
             dt = current_time - self.curr_time
-            print("dt: ", dt)
+            print("Iteration ", self.tracking_iterations, ", dt: ", dt)
             self.curr_time = current_time
 
         beliefs = self.get_predicted_beliefs(robot, dt)
@@ -403,7 +405,7 @@ class JPDAFMerged:
         graphs = self.get_feasible_graphs(own_state, self.sensor, beliefs)
         for graph in graphs:
             graph.build_resolution_update_multipliers()
-            graph.build_resolution_update_D_matrices()
+            #graph.build_resolution_update_D_matrices()
 
         # Create all data association hypotheses for each graph
         graph_data_association_list = self.get_graph_data_association_hypotheses(measurements, graphs, beliefs)
@@ -422,7 +424,32 @@ class JPDAFMerged:
         # Now perform moment matching on entire gaussian mixture.
         output = self.full_JPDAF_update(graph_data_association_list, y_dim)
 
+        # log info before performing update
+        if self.log:
+            self.json_log[self.tracking_iterations] = {}
+            # build contacts as a  list of raw floats
+            contacts = [measurement.getZ() for measurement in measurements]
+            if contacts:
+                if len(contacts[0].shape) == 2:
+                    contacts = [item[0, 0] for item in contacts]
+                elif len(contacts[0].shape) == 1:
+                    contacts = [item[0] for item in contacts]
+            self.json_log[self.tracking_iterations]['contacts'] = contacts
+            self.json_log[self.tracking_iterations]['dt'] = dt
+            self.json_log[self.tracking_iterations]['state'] = own_state.tolist()
+            beliefs = robot.tmm.get_system_belief_copy()
+            self.json_log[self.tracking_iterations]['prior_mean'] = beliefs._mean.tolist()
+            self.json_log[self.tracking_iterations]['prior_covariance'] = beliefs._cov.tolist()
+
         robot.tmm.updateBelief(output)
+
+        # log posterior beliefs
+        if self.log:
+            beliefs = robot.tmm.get_system_belief_copy()
+            self.json_log[self.tracking_iterations]['post_mean'] = beliefs._mean.tolist()
+            self.json_log[self.tracking_iterations]['post_covariance'] = beliefs._cov.tolist()
+
+        self.tracking_iterations += 1
 
         return None  # robots internal beliefs updated at end, no return
 
@@ -686,6 +713,17 @@ class JPDAFMerged:
                 Omega[j, i] = self.gate_measurement_to_target(gate_volume, z_predict, measurements[j])
 
         return Omega
+
+    def write_log_file_json(self, directory, filename):
+        """
+        performs json dump to specified file_name
+        :param directory: working directory
+        :param filename: name of json file
+        :return: None
+        """
+        filename = filename + '.json'
+        with open(directory + filename, 'w') as file:
+            json.dump(self.json_log, file, indent=4)
 
 ###############################
 ###### end JPDAF_merged #######
@@ -952,6 +990,9 @@ class GraphDataAssociation:
                 valid_event_mats.append(event_mat_list[i])
 
         self.data_associations = valid_event_mats
+
+
+
 
 #########################
 # end data JPDAF_merged #

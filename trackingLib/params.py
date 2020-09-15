@@ -44,6 +44,8 @@ class Parameters:
             self.estimator_verbose = node['estimator_verbose']
             self.sequential_resolution_update_flag = node['sequential_resolution_update_flag']
             self.simulated_time_flag = node['simulated_time_flag']
+            self.tracking_log_json = node['tracking_log_json']
+            self.planning_log_json = node['planning_log_json']
             self.num_targs = 0
 
             self.robots = self.buildRobots(self.yaml_file)

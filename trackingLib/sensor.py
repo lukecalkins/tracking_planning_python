@@ -279,7 +279,6 @@ class BearingSensor(Sensor):
 
         # sort the bearings
         true_bearings = np.array(true_bearings)
-        true_bearings_2pi = true_bearings + np.pi
         sorted_index = sorted(range(len(true_bearings)), key=lambda k: true_bearings[k], reverse=True)
 
         # construct feasible edge set
