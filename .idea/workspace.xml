@@ -2,19 +2,12 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="fb424a8f-8274-42c6-b1b1-0f8866416876" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/trackingLib/test/exp_data_tracker.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/trackingLib/scripts/__init__.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/trackingLib/scripts/read_console_log_merged.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/trackingLib/scripts/simulate_2targ_merg.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/trackingLib/config/init_info_planner.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/trackingLib/config/init_info_planner.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/trackingLib/config/sensors/bearing.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/trackingLib/config/sensors/bearing.yaml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/trackingLib/config/targetModel.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/trackingLib/config/targetModel.yaml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/trackingLib/dataAssociation.py" beforeDir="false" afterPath="$PROJECT_DIR$/trackingLib/dataAssociation.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/trackingLib/params.py" beforeDir="false" afterPath="$PROJECT_DIR$/trackingLib/params.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/trackingLib/plotting.py" beforeDir="false" afterPath="$PROJECT_DIR$/trackingLib/plotting.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/trackingLib/sensor.py" beforeDir="false" afterPath="$PROJECT_DIR$/trackingLib/sensor.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/trackingLib/target.py" beforeDir="false" afterPath="$PROJECT_DIR$/trackingLib/target.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/trackingLib/test/run_sim.py" beforeDir="false" afterPath="$PROJECT_DIR$/trackingLib/test/run_sim.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/trackingLib/test/test_data_association_merged.py" beforeDir="false" afterPath="$PROJECT_DIR$/trackingLib/test/test_data_association_merged.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/trackingLib/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/trackingLib/utils.py" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -42,6 +35,7 @@
   </component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/trackingLib/scripts" />
       <recent name="$PROJECT_DIR$/debugging/extended_state" />
       <recent name="$PROJECT_DIR$/test" />
     </key>
@@ -58,7 +52,7 @@
       </list>
     </option>
   </component>
-  <component name="RunManager" selected="Python.test_data_association_merged">
+  <component name="RunManager" selected="Python.read_console_log_merged">
     <configuration name="exp_data_tracker" type="PythonConfigurationType" factoryName="Python">
       <module name="filtering" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -114,6 +108,27 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test/post_process_track_stats.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="read_console_log_merged" type="PythonConfigurationType" factoryName="Python">
+      <module name="filtering" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="$USER_HOME$/opt/miniconda3/envs/track_env_36/bin/python3" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/trackingLib" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/trackingLib/scripts/read_console_log_merged.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -227,6 +242,28 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
+    <configuration name="simulate_2targ_merge" type="PythonConfigurationType" factoryName="Python">
+      <output_file path="$PROJECT_DIR$/trackingLib/log/console/console.log" is_save="true" />
+      <module name="filtering" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="$USER_HOME$/opt/miniconda3/envs/track_env_36/bin/python3" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/trackingLib" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/trackingLib/scripts/simulate_2targ_merg.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
     <configuration name="test_config_files" type="PythonConfigurationType" factoryName="Python">
       <module name="filtering" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -311,27 +348,6 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="test_networkx" type="PythonConfigurationType" factoryName="Python">
-      <module name="filtering" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="$PROJECT_DIR$/env/bin/python3" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/test" />
-      <option name="IS_MODULE_SDK" value="false" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test/networkX_test.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
-    </configuration>
     <configuration name="test_planner" type="PythonConfigurationType" factoryName="Python">
       <module name="filtering" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -375,13 +391,14 @@
       <method v="2" />
     </configuration>
     <list>
-      <item itemvalue="Python.test_data_association" />
-      <item itemvalue="Python.test_data_assoction_plan" />
       <item itemvalue="Python.run_sim" />
       <item itemvalue="Python.test_data_association_merged" />
+      <item itemvalue="Python.test_data_association" />
+      <item itemvalue="Python.simulate_2targ_merge" />
+      <item itemvalue="Python.read_console_log_merged" />
+      <item itemvalue="Python.test_data_assoction_plan" />
       <item itemvalue="Python.exp_data_tracker" />
       <item itemvalue="Python.read_exp_json" />
-      <item itemvalue="Python.test_networkx" />
       <item itemvalue="Python.test_config_files" />
       <item itemvalue="Python.run_sim_old" />
       <item itemvalue="Python.test_yaml" />
@@ -503,21 +520,33 @@
           <option name="timeStamp" value="325" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/trackingLib/dataAssociation.py</url>
-          <line>724</line>
-          <option name="timeStamp" value="343" />
+          <url>file://$PROJECT_DIR$/trackingLib/scripts/simulate_2targ_merg.py</url>
+          <line>66</line>
+          <option name="timeStamp" value="354" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/trackingLib/dataAssociation.py</url>
-          <line>443</line>
-          <option name="timeStamp" value="344" />
+          <url>file://$PROJECT_DIR$/trackingLib/scripts/read_console_log_merged.py</url>
+          <line>35</line>
+          <option name="timeStamp" value="361" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/trackingLib/dataAssociation.py</url>
-          <line>438</line>
-          <option name="timeStamp" value="345" />
+          <url>file://$PROJECT_DIR$/trackingLib/scripts/simulate_2targ_merg.py</url>
+          <line>71</line>
+          <option name="timeStamp" value="363" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/trackingLib/scripts/read_console_log_merged.py</url>
+          <line>30</line>
+          <option name="timeStamp" value="366" />
         </line-breakpoint>
       </breakpoints>
+      <default-breakpoints>
+        <breakpoint type="python-exception">
+          <properties notifyOnTerminate="true" exception="BaseException">
+            <option name="notifyOnTerminate" value="true" />
+          </properties>
+        </breakpoint>
+      </default-breakpoints>
     </breakpoint-manager>
   </component>
 </project>

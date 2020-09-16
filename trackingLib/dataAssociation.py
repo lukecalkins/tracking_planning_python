@@ -351,7 +351,7 @@ class JPDAF:
 class JPDAFMerged:
 
     def __init__(self, sensor, unresolved_resolution, clutter_density, sequential_resolution_update_flag,
-                 gate_level=0.99, FOV=2*np.pi, simulated_time_flag=True, log=False, verbose=False):
+                 gate_level=0.99, FOV=2*np.pi, simulated_time_flag=True, log=False, console_log=False, verbose=False):
         self.sensor = sensor
         self.bearing_res = unresolved_resolution
         self._clutter_density = clutter_density
@@ -368,6 +368,7 @@ class JPDAFMerged:
         self.log = log
         if self.log:
             self.json_log = {}
+        self.console_log = console_log
 
     def filter(self, measurements, robot, own_state):
         """
@@ -389,11 +390,11 @@ class JPDAFMerged:
 
         if self.simulated_time:
             dt = robot.tmm.samp
-            print("Iteration ", self.tracking_iterations, ", dt: ", dt)
+            #print("Iteration ", self.tracking_iterations, ", dt: ", dt)
         else:
             current_time = time.time()
             dt = current_time - self.curr_time
-            print("Iteration ", self.tracking_iterations, ", dt: ", dt)
+            #print("Iteration ", self.tracking_iterations, ", dt: ", dt)
             self.curr_time = current_time
 
         beliefs = self.get_predicted_beliefs(robot, dt)
@@ -448,6 +449,9 @@ class JPDAFMerged:
             beliefs = robot.tmm.get_system_belief_copy()
             self.json_log[self.tracking_iterations]['post_mean'] = beliefs._mean.tolist()
             self.json_log[self.tracking_iterations]['post_covariance'] = beliefs._cov.tolist()
+
+        if self.console_log:
+            self.log_to_console(graph_data_association_list)
 
         self.tracking_iterations += 1
 
@@ -724,6 +728,50 @@ class JPDAFMerged:
         filename = filename + '.json'
         with open(directory + filename, 'w') as file:
             json.dump(self.json_log, file, indent=4)
+
+    def log_to_console(self, gda_list):
+        """
+        creates json of relevenat information and prints to console.
+        :param gda_list: list of graph data association objects
+        :return: None
+        """
+        log_dict = {}
+        index = 0
+        for gda in gda_list:
+            log_dict[index] = {}
+
+            log_dict[index]['associations'] = []
+            for association in gda.data_associations:
+                log_dict[index]['associations'].append(association.tolist())
+
+            log_dict[index]['association_probabilities'] = []
+            for prob in gda.association_probabilities:
+                log_dict[index]['association_probabilities'].append(prob)
+
+            log_dict[index]['meas_updated_mean'] = []
+            log_dict[index]['meas_updated_cov'] = []
+            for belief in gda.measurement_updated_beliefs:
+                log_dict[index]['meas_updated_mean'].append(belief._mean.tolist())
+                log_dict[index]['meas_updated_cov'].append(belief._cov.tolist())
+
+            log_dict[index]['meas_updated_probabilities'] = []
+            for prob in gda.measurement_updated_probabilities:
+                log_dict[index]['meas_updated_probabilities'].append(prob)
+
+            log_dict[index]['resolution_updated_mean'] = []
+            log_dict[index]['resolution_updated_cov'] = []
+            for belief in gda.resolution_updated_beliefs:
+                log_dict[index]['resolution_updated_mean'].append(belief._mean.tolist())
+                log_dict[index]['resolution_updated_cov'].append(belief._cov.tolist())
+
+            log_dict[index]['resolution_updated_probabilities'] = []
+            for prob in gda.resolution_updated_probabilities:
+                log_dict[index]['resolution_updated_probabilities'].append(prob)
+
+            index += 1
+
+        print(json.dumps(log_dict))
+
 
 ###############################
 ###### end JPDAF_merged #######
