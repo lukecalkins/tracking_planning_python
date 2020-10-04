@@ -1,6 +1,6 @@
 ---
 Robots:
-- initial_state: [0, 0, 0]   # pi/2 = 1.57080, pi/4 = 0.7854
+- initial_state: [6.7, 4.7, 3.14]   # pi/2 = 1.57080, pi/4 = 0.7854
 #  sensorConfig: config/sensors/bearing.yaml
   dynamicsConfig: config/dynamics/dubins_car.yaml
 
@@ -8,9 +8,9 @@ sensorConfig: config/sensors/bearing.yaml
 targetConfig: config/targetModel.yaml
 plannerConfig: config/planner.yaml
 
-Tmax: 15
+Tmax: 90
 samp: 1.0
-random_seed: 2
+random_seed: 1
 map_min: [-10, -10]
 map_max: [10, 10]
 
@@ -27,4 +27,4 @@ simulated_time_flag: True
 
 # logging information
 tracking_log_json: True
-planning_log_json: False
+planning_log_json: True

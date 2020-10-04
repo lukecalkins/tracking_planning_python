@@ -146,8 +146,10 @@ class StatePlotter:
         b = 1
         if ax:
             ax.plot(a[0, :] + mean[0], a[1, :] + mean[1], clr)
+            ax.plot(mean[0], mean[1], clr, marker='x')
         else:
             self.ax.plot(a[0, :] + mean[0], a[1, :] + mean[1], clr)
+            self.ax.plot(mean[0], mean[1], clr, marker='x')
 
     def draw_planned_path(self, pose, planner_output):
         pos_x = [pose[0]]

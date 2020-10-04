@@ -33,8 +33,8 @@ if __name__ == '__main__':
     y1 = np.array([[range * np.cos(angle2_radians)], [range * np.sin(angle2_radians)], [-1], [0]])
 
     # move targets such that they can be positioned the correct separation before
-    y0[0, 0] = y0[0, 0] - 3
-    y1[0, 0] = y1[0, 0] + 3
+    y0[0, 0] = y0[0, 0] - 2
+    y1[0, 0] = y1[0, 0] + 2
 
     y = [y0, y1]
     own_state = robots[0].getState()
@@ -61,7 +61,8 @@ if __name__ == '__main__':
     measurements = []
     for targ in target_model.targets:
         measurements.append(sensor.observationModel(own_state, targ.getState()))
-    measurements = [Measurement(meas[0], 0, 1) for meas in measurements]
+    #measurements = [Measurement(meas[0], 0, 1) for meas in measurements]  # create list of Measurement objects
+    measurements = [Measurement((measurements[0] + measurements[1])/2, 0, 1)]  # create merged measurement
 
     # apply filter
     tracker.filter(measurements, robot, robot.getState())

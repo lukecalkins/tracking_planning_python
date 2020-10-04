@@ -19,6 +19,7 @@ class Parameters:
             node = yaml.load(file)
             self.target_config = os.path.join(self.working_directory, node['targetConfig'])
             self.sensor_config = os.path.join(self.working_directory, node['sensorConfig'])
+            self.planner_config = os.path.join(self.working_directory, node['plannerConfig'])
             with open(self.sensor_config, 'r') as sense_file:
                 sense_node = yaml.load(sense_file)
                 self.detection_prob = sense_node['detection_prob']
@@ -31,7 +32,11 @@ class Parameters:
                 targ_node = yaml.load(targ_file)
                 self.y_dim = targ_node['targ_dim']
                 self.targ_dim = targ_node['targ_dim']
-            self.planner_config = os.path.join(self.working_directory, node['plannerConfig'])
+            with open(self.planner_config, 'r') as plan_file:
+                plan_node = yaml.load(plan_file)
+                self.plan_dt = plan_node['dt']
+                self.speed = plan_node['speed']
+                self.turn_radius = plan_node['turn_radius']
             self.samp = node['samp']
             self.Tmax = node['Tmax']
             self.random_seed = node['random_seed']
@@ -167,6 +172,7 @@ class Parameters:
             speed = plan_node['speed']
             turn_radius = plan_node['turn_radius']
             filter_type = plan_node['filter_type']
+            planner_dt = plan_node['dt']
 
             # list actions available to vehicle for planning (speed, turn_rate) todo: configure this in the planner yaml
             actions = [[speed, 0], [speed, speed / turn_radius], [speed, -speed / turn_radius]]
@@ -190,9 +196,9 @@ class Parameters:
                 print("Cost function not recognized in initialization")
                 exit()
 
-            info_target_model = build_info_target_model(target_config, samp)
+            info_target_model = build_info_target_model(target_config, planner_dt)
             planner = plan.Planner(actions, cost_func, filter_type, self.sensor, self.horizon, info_target_model, JPDAF_simulator, JPDAF_merged_simulator,
-                                   log_file=planner_log_file, log_flag=planner_log_flag, final_cost=planner_final_cost)
+                                   log_file=planner_log_file, log=planner_log_flag, final_cost=planner_final_cost, dt=planner_dt)
 
         return planner
 

@@ -62,8 +62,8 @@ np.random.seed(p.random_seed)
 
 for kk in range(p.Tmax):
 
-    #target_model.forwardSimulate()
-    target_model.forwardSimulate_fixed_trajectory(kk + 1)
+    target_model.forwardSimulate()
+    #target_model.forwardSimulate_fixed_trajectory(kk + 1)
 
     for i in range(len(robots)):
         #measurements, num_targets_seen = sensor.senseTargets(robots[i].getState(), target_model.getTargets())

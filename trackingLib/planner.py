@@ -80,7 +80,7 @@ class SearchState:
         self.state = state  # Auv state
         self.Sigma = Sigma  # Target system covariance
         self.targ_state = y
-        self.targ_state_at_node = []
+        self.targ_state_at_node = self.targ_state[0, :]
         self.y_dim = 4  # todo: make this automatic
         self.z_dim = 1
         self.dt = dt
@@ -292,7 +292,7 @@ class SearchState:
 
 class Planner:
     def __init__(self, actions, cost_function, filter_type, sensor, horizon, info_target_model, JPDAF_sim=None, JPDAFM_sim = None, final_cost=False, dt=1,
-                 log_file=None, log_flag=False):
+                 log_file=None, log=False):
         self.actions = actions
         self.cost_function = cost_function
         self.filter = filter_type
@@ -304,9 +304,12 @@ class Planner:
         self.final_cost = final_cost
         self.JPDAF_sim = JPDAF_sim      # object that will be passed predicted beliefs and measurements
         self.JPDAFM_sim = JPDAFM_sim
-        self._log_flag = log_flag
+        self._planning_iterations = 0
+        self._log = log
+        if self._log:
+            self.json_log = {}
 
-    def planFVI(self, system_belief, own_state, debug=False):
+    def planFVI(self, system_belief, own_state, tracking_iteration, state_iteration=None, contact_iteration=None, debug=False):
 
         planner_output = []
         x0 = own_state
@@ -317,7 +320,7 @@ class Planner:
         y_T = self.info_target_model.predictTargetState(system_belief._mean, T)
         Sigma0 = system_belief._cov
 
-        S0 = SearchState(x0, Sigma0, y_T, dt=1)
+        S0 = SearchState(x0, Sigma0, y_T, self.dt)
         #S0.cost = 0  # every path starts at this node so cost doesn't matter
         root = SearchNode(S0, self.info_target_model, self.sensor, self.cost_function, self.JPDAF_sim, self.JPDAFM_sim)
 
@@ -341,16 +344,55 @@ class Planner:
 
         self.get_optimal_path(optimal_node, path_to_node)
 
-        if self._log_flag:
-            self.log_planner_path(optimal_node)
+        if self._log:
+            self.json_log[self._planning_iterations] = {}
+            self.json_log[self._planning_iterations]['tracking_iteration'] = tracking_iteration
+            self.json_log[self._planning_iterations]['planner_output'] = deepcopy(path_to_node)
+            self.json_log[self._planning_iterations]['state_iteration'] = state_iteration
+            self.json_log[self._planning_iterations]['contact_iteration'] = contact_iteration
 
+            curr_node = optimal_node
+            means = []
+            covs = []
+            own_states = []
+            means.append(optimal_node.state.targ_state_at_node.tolist())
+            covs.append(optimal_node.state.Sigma.tolist())
+            own_states.append(optimal_node.state.state.tolist())
+            while curr_node.parent != None:
+                curr_node = curr_node.parent
+                if isinstance(curr_node.state.targ_state_at_node, list):
+                    means.insert(0, curr_node.state.targ_state_at_node)
+                else:
+                    means.insert(0, curr_node.state.targ_state_at_node.tolist())
+                covs.insert(0, curr_node.state.Sigma.tolist())
+                if isinstance(curr_node.state.state, list):
+                    own_states.insert(0, curr_node.state.state)
+                else:
+                    own_states.insert(0, curr_node.state.state.tolist())
+            self.json_log[self._planning_iterations]['means'] = means
+            self.json_log[self._planning_iterations]['covs'] = covs
+            self.json_log[self._planning_iterations]['own_states'] = own_states
+
+        self._planning_iterations += 1
 
         return path_to_node, optimal_node
+
+    def write_log_file_json(self, directory, filename):
+        """
+        performs json dump to specified file_name
+        :param directory: working directory
+        :param filename: name of json file
+        :return: None
+        """
+        filename = filename + '.json'
+        with open(directory + filename, 'w') as file:
+            json.dump(self.json_log, file, indent=4)
 
 
     def plan_RVI(self, robot, T, delta, eps, debug=False):
 
         return 0
+
 
     def get_optimal_path(self, node, path):
         """

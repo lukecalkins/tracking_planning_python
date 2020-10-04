@@ -16,7 +16,7 @@ if __name__ == '__main__':
     map_max = p.map_max
     title = "Kalman Filter test"
     plotter = StatePlotter(map_min, map_max, title, video=True, track_stats_flag=False, FOV_flag=True,
-                           meas_plot_flag=True, plan_plot_flag=True, )
+                           meas_plot_flag=True, plan_plot_flag=True, working_directory=working_directory)
 
     planner_output = []  # only utilized when not running planner
 
@@ -59,7 +59,8 @@ if __name__ == '__main__':
 
         if kk % p.n_controls == 0:
             for robot in robots:
-                planner_output, optimal_node = planner.planFVI(robot.tmm.get_system_belief_copy(), robot.getState())
+                planner_output, optimal_node = planner.planFVI(robot.tmm.get_system_belief_copy(), robot.getState(),
+                                                               JPDAF_merged.tracking_iterations)
                 steps_into_plan = 0
 
         print("planner output", planner_output)
@@ -78,7 +79,7 @@ if __name__ == '__main__':
 
         plotter.plot_state(robots, robots[0].getState(), target_model.getTargets(), measurements,
                            num_targs_seen=num_targets_seen, timestep=kk,
-                           planner_output=planner_output, robot_size=50, target_size=10, fov=p.fov,
+                           planner_output=planner_output, robot_size=1, target_size=10, fov=p.fov,
                            max_range=p.max_range, plan_node=curr_node)
 
         #track_stats_plotter.plot_stats(robot.tmm.getCovarianceMatrix(), robot.tmm.getTargetState(), targets)
@@ -87,9 +88,10 @@ if __name__ == '__main__':
         print("Timestep: ", kk)
 
     #filename = 'planning/merged/2_targ/JPDAF_merged_FOV_final_cost_10_steps_config_2'
-    filename = 'planning/merged/2_targ/test_process_noise'
+    filename = 'planning/merged/exp_3targ/3targ_test_moving_0.1_config2'
     filename = filename + '_seed_' + str(p.random_seed)
     plotter.save_video(filename=filename, fps=5)
 
     #plotter.save_track_stats(filename=filename)
     #track_stats_plotter.save_video(filename='planning/JPDAF/test/2_targ_FVI_log_det_kalman_speed_5_2_stats', fps=5)
+    planner.write_log_file_json(working_directory + '/log/', 'plan_log')

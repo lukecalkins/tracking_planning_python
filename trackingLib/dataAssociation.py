@@ -368,13 +368,15 @@ class JPDAFMerged:
         self.log = log
         if self.log:
             self.json_log = {}
+
         self.console_log = console_log
 
     def filter(self, measurements, robot, own_state):
         """
         fully external functioning JPDAF filter without clutter and with perfect detections
         :param measurements: measurement list
-        :param own_state: own_ship state
+if self.log:
+            self.json_log = {}        :param own_state: own_ship state
         :param a targ_predict_beliefs: list of target beliefs (mean, cov) from previous predcited from prevous time step
         :return: a
         """

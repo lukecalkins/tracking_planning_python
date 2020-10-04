@@ -8,8 +8,9 @@ cost: max_eig
 final_cost: False
 
 # action parameters
-speed: 10.0
-turn_radius: 50.0
+speed: 0.29
+turn_radius: 0.92
+dt: 2 # seconds
 
 # filter type in
 #filter_type: kalman
@@ -18,6 +19,7 @@ filter_type: JPDAF_merged
 
 FOV_flag: True
 log_file: log/plan.json
-log_flag: False
+log_flag: True
 verbose: False
+
 
