@@ -37,8 +37,11 @@ class Parameters:
                 self.plan_dt = plan_node['dt']
                 self.speed = plan_node['speed']
                 self.turn_radius = plan_node['turn_radius']
+                self.motor_forward_speed = plan_node['motor_forward_speed']
+                self.motor_turn_speed = plan_node['motor_turn_speed']
             self.samp = node['samp']
             self.Tmax = node['Tmax']
+            self.mission_length = node['mission_length']
             self.random_seed = node['random_seed']
             self.map_min = node['map_min']
             self.map_max = node['map_max']
@@ -198,7 +201,7 @@ class Parameters:
 
             info_target_model = build_info_target_model(target_config, planner_dt)
             planner = plan.Planner(actions, cost_func, filter_type, self.sensor, self.horizon, info_target_model, JPDAF_simulator, JPDAF_merged_simulator,
-                                   log_file=planner_log_file, log=planner_log_flag, final_cost=planner_final_cost, dt=planner_dt)
+                                   log_file=planner_log_file, log=planner_log_flag, final_cost=planner_final_cost, dt=planner_dt, mission_length=self.mission_length)
 
         return planner
 

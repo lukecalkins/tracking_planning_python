@@ -72,7 +72,8 @@ class BearingSensor(Sensor):
 
         target_state = target.getState()
         bearing = self.observationModel(own_state, target_state)
-        noise = np.random.normal(0, self._b_sigma)
+        #noise = np.random.normal(0, self._b_sigma)
+        noise = 0
         z = restrict_angle(bearing + noise)
         if self.in_FOV(z):
             return Measurement(np.array([z]), target.getID(), 1)

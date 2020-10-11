@@ -1,6 +1,6 @@
 ---
 Robots:
-- initial_state: [6.7, 4.7, 3.14]   # pi/2 = 1.57080, pi/4 = 0.7854
+- initial_state: [6.7, 7.22, 3.14]   # pi/2 = 1.57080, pi/4 = 0.7854
 #  sensorConfig: config/sensors/bearing.yaml
   dynamicsConfig: config/dynamics/dubins_car.yaml
 
@@ -8,7 +8,8 @@ sensorConfig: config/sensors/bearing.yaml
 targetConfig: config/targetModel.yaml
 plannerConfig: config/planner.yaml
 
-Tmax: 90
+mission_length: 6  # number of planner iterations
+Tmax: 100  # time of  simulation in seconds
 samp: 1.0
 random_seed: 1
 map_min: [-10, -10]
@@ -18,8 +19,8 @@ map_max: [10, 10]
 clutter_density: 0.03183  # 3.183 = 20 per 360 degrees ~ 1 every 18 degrees
 gate_level: 0.99
 estimator_verbose: False
-horizon: 5  # planning horizon
-n_controls: 5  # Re-planning time
+horizon: 10  # planning horizon
+n_controls: 10  # Re-planning time
 sequential_resolution_update_flag: 1  # 0 if resolution update should be done in one step
 
 # Simulation vs real time

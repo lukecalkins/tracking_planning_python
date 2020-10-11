@@ -1,16 +1,20 @@
 ---
 # Planner configuration for forward value iteration
-#cost: log_det
+cost: log_det
 #cost: log_det_plus_SD
-cost: max_eig
+#cost: max_eig
 #cost: gate_cost
 #cost: delta_bearing
-final_cost: False
+final_cost: True
 
 # action parameters
-speed: 0.29
-turn_radius: 0.92
-dt: 2 # seconds
+speed: 0.265
+turn_radius: 0.98
+dt: 3 # seconds
+
+# motor values  used in experiment
+motor_forward_speed: 0.2
+motor_turn_speed: 0.75  # between  0 and 1, fraction of forward speed add/subtract to turn
 
 # filter type in
 #filter_type: kalman

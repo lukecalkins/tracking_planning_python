@@ -59,6 +59,7 @@ def draw_cov(ax, mean, cov, confidence, clr='r'):
     a = np.matmul(Q, np.array([np.cos(t), np.sin(t)]))
     b = 1
     ax.plot(a[0, :] + mean[0], a[1, :] + mean[1], clr)
+    ax.plot(mean[0], mean[1], clr, marker='x')
 
 
 def get_custom_trajectory(y0, T, dt):

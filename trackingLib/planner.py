@@ -124,11 +124,13 @@ class SearchState:
             bearing_j = bearings[sorted_index[i + 1]]
             if sensor.in_same_FOV(bearing_i, bearing_j):
                 feasible_edges.append((sorted_index[i], sorted_index[i + 1]))
-        if n_targs > 2:
+        """
+        if n_targs > 2:  # todo: make sure this isn't a wrap around case.  Should be able to check sign
             bearing_i = bearings[sorted_index[n_targs - 1]]
             bearing_j = bearings[sorted_index[0]]
             if sensor.in_same_FOV(bearing_i, bearing_j):
                 feasible_edges.append((sorted_index[n_targs - 1], sorted_index[0]))
+        """
         # now loop through feasible edges and decide whether edge is there or not based on threshold
         edges = []
         for edge in feasible_edges:
@@ -222,7 +224,15 @@ class SearchState:
         return None
 
     def filter_cov(self, beliefs_model, sensor, depth):
+
+        ownship = self.state
+        y_curr = self.targ_state[depth, :]
+        self.targ_state_at_node = y_curr
+        num_targs = len(beliefs_model.targets)
+
+
         targ_num = 0
+        predicted_beliefs = []
         for target in beliefs_model.targets:
             start_block = targ_num * self.y_dim
             end_block = start_block + self.y_dim
@@ -232,10 +242,26 @@ class SearchState:
             V = np.zeros((self.z_dim, self.z_dim))
             sensor.getJacobian(H, V, self.state, self.targ_state[depth])
             Sigma_targ = self.Sigma[start_block:end_block, start_block:end_block]  # todo: use block operator
-            cov_update_targ, inn_cov_targ = KalmanFilterCovAndInnovationCov(Sigma_targ, A, W, H, V)
-            self.Sigma[start_block:end_block, start_block:end_block] = cov_update_targ
+            bearing_targ = sensor.observationModel(ownship, y_curr[start_block:end_block])
+            # update covariance with measurement only if in field of view
+            if sensor.in_FOV(bearing_targ):
+                cov_update_targ, inn_cov_targ = KalmanFilterCovAndInnovationCov(Sigma_targ, A, W, H, V)
+                self.Sigma[start_block:end_block, start_block:end_block] = cov_update_targ
+            else:
+                cov_update_targ = A @ Sigma_targ @ A.T + W
+                self.Sigma[start_block:end_block, start_block:end_block] = cov_update_targ
             #self.inn_cov.append(inn_cov_targ)
+            predicted_beliefs.append(GaussianBelief(y_curr[start_block:end_block], None))
             targ_num += 1
+
+        # set predicted measurements
+        bearings = get_bearings(ownship, predicted_beliefs, sensor)
+        meas = []
+        meas_as_list = []
+        for i in range(num_targs):
+            meas.append(Measurement(bearings[i], 0, 1))
+            meas_as_list.append(meas[i].getZ())
+        self.predicted_meas = meas_as_list
 
         return None
 
@@ -292,7 +318,7 @@ class SearchState:
 
 class Planner:
     def __init__(self, actions, cost_function, filter_type, sensor, horizon, info_target_model, JPDAF_sim=None, JPDAFM_sim = None, final_cost=False, dt=1,
-                 log_file=None, log=False):
+                 log_file=None, log=False, mission_length=None):
         self.actions = actions
         self.cost_function = cost_function
         self.filter = filter_type
@@ -305,6 +331,7 @@ class Planner:
         self.JPDAF_sim = JPDAF_sim      # object that will be passed predicted beliefs and measurements
         self.JPDAFM_sim = JPDAFM_sim
         self._planning_iterations = 0
+        self.mission_length = mission_length
         self._log = log
         if self._log:
             self.json_log = {}
@@ -346,6 +373,7 @@ class Planner:
 
         if self._log:
             self.json_log[self._planning_iterations] = {}
+            self.json_log[self._planning_iterations]['plan_dt'] = self.dt
             self.json_log[self._planning_iterations]['tracking_iteration'] = tracking_iteration
             self.json_log[self._planning_iterations]['planner_output'] = deepcopy(path_to_node)
             self.json_log[self._planning_iterations]['state_iteration'] = state_iteration
@@ -376,6 +404,12 @@ class Planner:
         self._planning_iterations += 1
 
         return path_to_node, optimal_node
+
+    def is_mission_complete(self):
+        if self._planning_iterations >= self.mission_length:
+            return True
+        else:
+            return False
 
     def write_log_file_json(self, directory, filename):
         """

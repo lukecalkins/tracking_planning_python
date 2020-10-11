@@ -28,8 +28,10 @@ if __name__ == '__main__':
 
     JPDAF_merged = DA.JPDAFMerged(sensor, p.unresolved_resolution, p.clutter_density,
                                   p.sequential_resolution_update_flag,
-                                  p.gate_level, simulated_time_flag=p.simulated_time_flag)
+                                  p.gate_level, FOV=p.fov, simulated_time_flag=p.simulated_time_flag)
     JPDAF_ambiguity = DA_amb.JPDAF_amb(p.detection_prob, p.clutter_density, p.gate_level)
+
+    nearest_neighbor = DA.NearestNeighborFilter(sensor, simulated_time_flag=p.simulated_time_flag)
 
     np.random.seed(p.random_seed)
 
@@ -57,25 +59,39 @@ if __name__ == '__main__':
 
             filter_output = JPDAF_merged.filter(measurements, robots[i], robots[i].getState())
 
-        if kk % p.n_controls == 0:
+            #nearest_neighbor.filter(measurements, robots[i], robots[i].getState())
+
+        if kk % (p.n_controls * p.plan_dt) == 0:
             for robot in robots:
                 planner_output, optimal_node = planner.planFVI(robot.tmm.get_system_belief_copy(), robot.getState(),
                                                                JPDAF_merged.tracking_iterations)
                 steps_into_plan = 0
+                time_on_action = p.plan_dt
 
         print("planner output", planner_output)
 
         for robot in robots:
             if len(planner_output) == 0:
                 robot.applyControl([0,  0], 1)
+                print('Applying no control')
             else:
                 print("plan_output length = ", len(planner_output))
+                if time_on_action >= p.plan_dt:
+                    action = planner_output.pop(0)
+                    time_on_action = 0
+                robot.applyControl(action, 1)
+                time_on_action += 1
+
+
+                # old controller for constant dt=1
+                """
                 robot.applyControl(planner_output.pop(0), 1)
                 #robot.applyControl([20, 0], 1)
                 steps_into_plan += 1
                 curr_node = optimal_node
                 for i in range(p.horizon - steps_into_plan):
                     curr_node = curr_node.parent
+                """
 
         plotter.plot_state(robots, robots[0].getState(), target_model.getTargets(), measurements,
                            num_targs_seen=num_targets_seen, timestep=kk,
@@ -88,7 +104,7 @@ if __name__ == '__main__':
         print("Timestep: ", kk)
 
     #filename = 'planning/merged/2_targ/JPDAF_merged_FOV_final_cost_10_steps_config_2'
-    filename = 'planning/merged/exp_3targ/3targ_test_moving_0.1_config2'
+    filename = 'planning/merged/100820/JPDAM_horizon_10_final_cost_log_det'
     filename = filename + '_seed_' + str(p.random_seed)
     plotter.save_video(filename=filename, fps=5)
 

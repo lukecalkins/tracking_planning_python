@@ -371,7 +371,7 @@ class JPDAFMerged:
 
         self.console_log = console_log
 
-    def filter(self, measurements, robot, own_state):
+    def filter(self, measurements, robot, own_state, state_iteration=None, contact_iteration=None):
         """
         fully external functioning JPDAF filter without clutter and with perfect detections
         :param measurements: measurement list
@@ -394,10 +394,14 @@ if self.log:
             dt = robot.tmm.samp
             #print("Iteration ", self.tracking_iterations, ", dt: ", dt)
         else:
-            current_time = time.time()
-            dt = current_time - self.curr_time
-            #print("Iteration ", self.tracking_iterations, ", dt: ", dt)
-            self.curr_time = current_time
+            if self.tracking_iterations == 0:
+                dt = 0
+                self.curr_time = time.time()
+            else:
+                current_time = time.time()
+                dt = current_time - self.curr_time
+                self.curr_time = current_time
+                #print("Iteration ", self.tracking_iterations, ", dt: ", dt)
 
         beliefs = self.get_predicted_beliefs(robot, dt)
         full_belief = self.get_full_predicted_belief(beliefs)
@@ -411,7 +415,7 @@ if self.log:
             #graph.build_resolution_update_D_matrices()
 
         # Create all data association hypotheses for each graph
-        graph_data_association_list = self.get_graph_data_association_hypotheses(measurements, graphs, beliefs)
+        graph_data_association_list = self.get_graph_data_association_hypotheses(measurements, graphs, beliefs, own_state)
 
         #for each GraphDataAssociation object, calculate the probability of each data association
         for gda in graph_data_association_list:
@@ -432,14 +436,19 @@ if self.log:
             self.json_log[self.tracking_iterations] = {}
             # build contacts as a  list of raw floats
             contacts = [measurement.getZ() for measurement in measurements]
-            if contacts:
+            if contacts and isinstance(contacts[0], (list, np.ndarray)):
                 if len(contacts[0].shape) == 2:
                     contacts = [item[0, 0] for item in contacts]
                 elif len(contacts[0].shape) == 1:
                     contacts = [item[0] for item in contacts]
             self.json_log[self.tracking_iterations]['contacts'] = contacts
             self.json_log[self.tracking_iterations]['dt'] = dt
-            self.json_log[self.tracking_iterations]['state'] = own_state.tolist()
+            if isinstance(own_state, np.ndarray):
+                self.json_log[self.tracking_iterations]['state'] = own_state.tolist()
+            else:
+                self.json_log[self.tracking_iterations]['state'] = own_state
+            self.json_log[self.tracking_iterations]['state_iteration'] = state_iteration
+            self.json_log[self.tracking_iterations]['contact_iteration'] = contact_iteration
             beliefs = robot.tmm.get_system_belief_copy()
             self.json_log[self.tracking_iterations]['prior_mean'] = beliefs._mean.tolist()
             self.json_log[self.tracking_iterations]['prior_covariance'] = beliefs._cov.tolist()
@@ -500,7 +509,7 @@ if self.log:
         JPDAF_belief = GaussianBelief(mean_update, cov_update)
         return JPDAF_belief
 
-    def get_graph_data_association_hypotheses(self, measurements, graphs, beliefs):
+    def get_graph_data_association_hypotheses(self, measurements, graphs, beliefs, own_state):
         """
         function that takes the measurements and all feasible graphs from the target predictions and creates a list of
         objects where each item is a graph and possible data association for the graph.
@@ -512,7 +521,15 @@ if self.log:
         n_targs = len(beliefs)
         m_meas = len(measurements)
 
-        meas_range = list(range(n_targs + 1))
+        bearings = get_bearings(own_state, self.sensor, beliefs)
+
+        meas_range = [0]
+        for i in range(n_targs):
+            bearing = bearings[i]
+            if self.sensor.in_FOV(bearing):
+                meas_range.append(i + 1)  # measurements can only be assigned to targets in FOV
+
+        #meas_range = list(range(n_targs + 1))  # indices a measurement could be assigned to (0 or 1:n_targs)
         rows_list = m_meas * [meas_range]  # every measurement could come from every target, or clutter
         all_events = list(IT.product(*rows_list))
 
@@ -582,14 +599,18 @@ if self.log:
         # construct feasible edge set
         feasible_edges = []
         for i in range(n_targs - 1):
-            feasible_edges.append((sorted_index[i], sorted_index[i + 1]))
+            bearing_i = bearings[sorted_index[i]]
+            bearing_j = bearings[sorted_index[i + 1]]
+            if sensor.in_same_FOV(bearing_i, bearing_j):
+                feasible_edges.append((sorted_index[i], sorted_index[i + 1]))
+        """
         if n_targs > 2:
             bearing_i = bearings[sorted_index[n_targs - 1]]
             bearing_j = bearings[sorted_index[0]]
             bearing_diff = bearing_i - bearing_j
             if bearing_diff + 2 * np.pi < np.pi:
                 feasible_edges.append((sorted_index[n_targs - 1], sorted_index[0]))
-
+        """
         # construct all possible graphs of 0 edges, up to n_targs - 1 edges
         graphs = []
         for i in range(n_targs):
@@ -1047,6 +1068,237 @@ class GraphDataAssociation:
 #########################
 # end data JPDAF_merged #
 #########################
+
+class NearestNeighborFilter:
+    def __init__(self, sensor, gate_level=0.99, log=False, simulated_time_flag=True):
+        self.tracking_iterations = 0
+        self.sensor = sensor
+        self.simulated_time = simulated_time_flag
+        self.current_time = time.time()
+        self._gate_level = gate_level
+        self.log = log
+        if self.log:
+            self.json_log = {}
+
+    def filter(self,  measurements, robot, own_state, state_iteration=None, contact_iteration=None):
+        self._inn_cov_list = []
+        self._z_predict_list = []
+        self._H_k_list = []
+        self.z_dim = self.sensor.z_dim
+        self.y_dim = robot.tmm.targets[0]._y_dim
+        self.b_sigma = self.sensor.get_b_sigma()
+
+        if self.simulated_time:
+            dt = robot.tmm.samp
+        else:
+            if self.tracking_iterations == 0:
+                dt =  0
+                self.curr_time = time.time()
+            else:
+                current_time = time.time()
+                dt = current_time - self.curr_time
+                self.curr_time = current_time
+
+        beliefs = self.get_predicted_beliefs(robot, dt)
+        full_belief = self.get_full_predicted_belief(beliefs)
+        H_tilde = self.build_H_tilde(beliefs, own_state, self.z_dim)  # H_tilde not used in NN, but H_k list populated
+        z_target_predict = np.array(self._z_predict_list)
+
+        assignment = self.find_nearest_neighbor_measurement(beliefs, measurements, own_state)
+
+        # with nearest neighbor assignment, filter each target accordingly
+        updated_beliefs = self.measurement_update(beliefs, assignment, measurements)
+        full_updated_belief = self.get_full_predicted_belief(updated_beliefs)  # mulit-target stacked
+
+        # log info before performing update
+        if self.log:
+            self.json_log[self.tracking_iterations] = {}
+            # build contacts as a  list of raw floats
+            contacts = [measurement.getZ() for measurement in measurements]
+            if contacts and isinstance(contacts[0], (list, np.ndarray)):
+                if len(contacts[0].shape) == 2:
+                    contacts = [item[0, 0] for item in contacts]
+                elif len(contacts[0].shape) == 1:
+                    contacts = [item[0] for item in contacts]
+            self.json_log[self.tracking_iterations]['contacts'] = contacts
+            self.json_log[self.tracking_iterations]['dt'] = dt
+            if isinstance(own_state, np.ndarray):
+                self.json_log[self.tracking_iterations]['state'] = own_state.tolist()
+            else:
+                self.json_log[self.tracking_iterations]['state'] = own_state
+            self.json_log[self.tracking_iterations]['state_iteration'] = state_iteration
+            self.json_log[self.tracking_iterations]['contact_iteration'] = contact_iteration
+            beliefs = robot.tmm.get_system_belief_copy()
+            self.json_log[self.tracking_iterations]['prior_mean'] = beliefs._mean.tolist()
+            self.json_log[self.tracking_iterations]['prior_covariance'] = beliefs._cov.tolist()
+
+        robot.tmm.updateBelief(full_updated_belief)
+
+        # log posterior beliefs
+        if self.log:
+            beliefs = robot.tmm.get_system_belief_copy()
+            self.json_log[self.tracking_iterations]['post_mean'] = beliefs._mean.tolist()
+            self.json_log[self.tracking_iterations]['post_covariance'] = beliefs._cov.tolist()
+
+        self.tracking_iterations += 1
+
+        return None
+
+    def measurement_update(self, beliefs, assignment, measurements):
+        """
+        kalman filter measurement update for each target given measurement assignment
+        :param beliefs:
+        :param assignment:
+        :param measurements:
+        :return:
+        """
+
+        updated_beliefs = []
+        for i in range(len(beliefs)):
+            mean_predict = beliefs[i]._mean
+            cov_predict = beliefs[i]._cov
+            H = self._H_k_list[i]
+            z_predict = self._z_predict_list[i]
+            z_predict = z_predict.reshape((1,1))
+            V = np.array([[self.b_sigma ** 2]])
+            if assignment[i] == -1:
+                updated_beliefs.append(GaussianBelief(mean_predict, cov_predict))
+                continue
+            z_k = np.array(measurements[assignment[i]].getZ()).reshape(1, 1)
+            output = KalmanFilterMeasurementUpdate(mean_predict, cov_predict, H, V, z_k, z_predict)
+            updated_beliefs.append(output)
+
+        return updated_beliefs
+
+    def find_nearest_neighbor_measurement(self,  predicted_beliefs, measurements, own_state):
+
+        num_targs = len(self._z_predict_list)
+        assignment = []  # list of measruement indexes (-1 if not assigned)
+        for i in range(num_targs):
+            # get gating window
+            H = np.zeros((self.z_dim, self.y_dim))
+            V = np.zeros((self.z_dim, self.z_dim))
+            self.sensor.getJacobian(H, V, own_state, predicted_beliefs[i]._mean)
+            inn_cov = H @ predicted_beliefs[i]._cov @ H.transpose() + V
+            gate_volume = self.get_gate_volume(inn_cov)
+            delta = gate_volume / 2
+            gate_min = restrict_angle(self._z_predict_list[i] - delta)
+            gate_max = restrict_angle(self._z_predict_list[i] + delta)
+            meas_in_gate = []
+            meas_in_gate_dists = []
+            for k in range(len(measurements)):
+                # create list of measurements within gate
+                if np.abs(restrict_angle(measurements[k].getZ() - self._z_predict_list[i])) < delta:
+                    meas_in_gate.append(k)
+                    meas_in_gate_dists.append(np.abs(restrict_angle(measurements[k].getZ() - self._z_predict_list[i])))
+
+            if meas_in_gate:
+                min_index = np.argmin(meas_in_gate_dists)
+                meas_index = meas_in_gate[min_index]
+                assignment.append(meas_index)
+            else:
+                assignment.append(-1)
+
+        return assignment
+
+    def get_gate_volume(self, inn_cov):
+        """
+
+        :param inn_cov: innovation covariance
+        :return:
+        """
+
+        if self._gate_level == 0.95:
+            k_alpha = 3.84
+        elif self._gate_level == 0.99:
+            k_alpha = 6.64
+        elif self._gate_level == 0.999:
+            k_alpha = 10.83
+        else:
+            print("Desired gating level not found")
+
+        gate_volume = 2 * np.sqrt(k_alpha) * np.sqrt(np.linalg.det(inn_cov))
+
+        return gate_volume
+
+    def build_H_tilde(self, targ_predict_beliefs, ownship, z_dim):
+        """
+        this function takes the beliefs
+        :param beliefs:
+        :return:
+        """
+        y_dim = targ_predict_beliefs[0]._mean.shape[0]
+        num_targs = len(targ_predict_beliefs)
+        H_tilde = np.zeros((z_dim * num_targs, y_dim * num_targs))
+        for i in range(num_targs):
+            start_row = i * z_dim
+            stop_row = start_row + z_dim
+            start_col = i * y_dim
+            stop_col = start_col + y_dim
+            z_predict = self.sensor.observationModel(ownship, targ_predict_beliefs[i]._mean)
+            H = np.zeros((z_dim, y_dim))
+            V = np.zeros((z_dim, z_dim))
+            self.sensor.getJacobian(H, V, ownship, targ_predict_beliefs[i]._mean)
+            self._H_k_list.append(H)
+            self._z_predict_list.append(z_predict)
+            H_tilde[start_row:stop_row, start_col:stop_col] = H
+
+        return H_tilde
+
+    def get_full_predicted_belief(self, beliefs):
+        """
+        same as get_predicted beliefs  but just stacking all target beliefs into a single state vector and
+        covariance matrix
+        :param beliefs: list of beliefs
+        :return:
+        """
+        y_dim = beliefs[0]._mean.shape[0]
+        num_targs = len(beliefs)
+        system_state_vector = np.zeros((num_targs * y_dim,  1))
+        system_covariance = np.zeros((num_targs * y_dim, num_targs * y_dim))
+        for i in range(num_targs):
+            start = i * y_dim
+            stop = start + y_dim
+            system_state_vector[start:stop] = beliefs[i]._mean
+            system_covariance[start:stop, start:stop] = beliefs[i]._cov
+        system_belief = GaussianBelief(system_state_vector, system_covariance)
+
+        return system_belief
+
+    def get_predicted_beliefs(self, robot, dt):
+        """
+        function that will take targets from the robot target model and generate predicted mean and covariance for the
+        current time step
+        :param robot: robot object
+        :param dt: time since last filter called, used for target motion model
+        :return: list of Gaussian beliefs (mean and cov)
+        """
+
+        beliefs = []
+        for i in range(len(robot.tmm.targets)):
+            target = robot.tmm.targets[i]
+            y_targ_belief = target.getState()
+            cov_targ_belief = target.getCovariance()
+            A = target.getJacobian(dt)
+            W = target.getNoise(dt)
+            y_targ_predict = A @ y_targ_belief
+            cov_targ_predict = A @ cov_targ_belief @ A.transpose() + W
+            predicted_belief = GaussianBelief(y_targ_predict, cov_targ_predict)
+            beliefs.append(predicted_belief)
+
+        return beliefs
+
+    def write_log_file_json(self, directory, filename):
+        """
+        performs json dump to specified file_name
+        :param directory: working directory
+        :param filename: name of json file
+        :return: None
+        """
+        filename = filename + '.json'
+        with open(directory + filename, 'w') as file:
+            json.dump(self.json_log, file, indent=4)
+
 
 def gateMeasurement_wrapped_gate(meas, z_predict, delta):
     """

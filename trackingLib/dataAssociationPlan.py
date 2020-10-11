@@ -323,6 +323,7 @@ class JPDAF_merged_simulate:
         visited = set()
         meas = []
         targs_on_meas = []
+        # Generate merged contacts for targets in FOV
         for i in range(n_targs):
             if i not in visited:
                 visited.add(i)
@@ -334,13 +335,13 @@ class JPDAF_merged_simulate:
                         visited.add(j)
                 else:
                     connected_targs = []
-                connected_targs.insert(0, i)
+                connected_targs.insert(0, i)   # add target to  its connected ones
                 bearings_to_merge = bearings[connected_targs]
                 mean_bearing = bearings_to_merge.mean()
                 meas.append(Measurement(mean_bearing, 0, 1))
                 targs_on_meas.append(connected_targs)
 
-        # now construct association mat from
+        # now construct association mat from merged contacts
         num_meas = len(meas)
         Omega = np.zeros((num_meas, n_targs))
         for i in range(num_meas):
@@ -540,6 +541,29 @@ class JPDAF_merged_simulate:
         system_belief = GaussianBelief(system_state_vector, system_covariance)
 
         return system_belief
+
+class NearestNeighborSimulate:
+    def __init__(self, sensor, unresolved_resolution, sequential_resolution_update_flag,
+                 FOV=2*np.pi, gate_level=0.99, verbose=False, merged_thresh=0.5):
+        self.sensor = sensor
+        self.bearing_res = unresolved_resolution
+        self.sequential_resolution_update_flag = sequential_resolution_update_flag
+        self._gate_level = gate_level
+        self._verbose = verbose
+        self._FOV = FOV
+        self.merging_threshold = merged_thresh
+        self._inn_cov_list = []   # each iteration, this will be populated with the innovation covariance of each target
+        self._z_predict_list = []
+        self._H_k_list = []
+
+    def filter(self, beliefs, ownship, bearings):
+        """
+        outputs system belief based on nearest neighbors.
+        :param beliefs:
+        :param ownship:
+        :param bearings:
+        :return:
+        """
 
 
 def get_bearings(ownship, beliefs, sensor):
