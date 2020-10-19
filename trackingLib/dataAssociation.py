@@ -17,14 +17,15 @@ from collections import deque
 
 class JPDAF:
 
-    def __init__(self, detection_prob, clutter_density, gate_level=0.99, verbose=False):
+    def __init__(self, sensor, detection_prob, clutter_density, gate_level=0.99, verbose=False):
+        self.sensor = sensor
         self._detection_prob = detection_prob
         self._gate_level = gate_level
         self._verbose = verbose
         self._clutter_density = clutter_density
 
 
-    def filter(self, measurements, robot):
+    def filter(self, measurements, robot, own_state):
         """
         Interfacing function that calls applies the JPDAF filter given target estimates and a set of measurements
         :param measurements: list of measurements (raw, does not use associated target ID)
@@ -224,14 +225,14 @@ class JPDAF:
         x_t = robot.getState()
         num_targets = robot.tmm.num_targets()
         y_dim = int(robot.tmm.target_dim / num_targets)
-        z_dim = robot.sensor.z_dim
+        z_dim = self.sensor.z_dim
         for info_target in robot.tmm.targets:
             #info_target = robot.tmm.targets[targetIDs[i]]
             info_target.predictMeanAndCovariance(1)
             H = np.zeros((z_dim, y_dim))
             V = np.zeros((z_dim, z_dim))
-            robot.sensor.getJacobian(H, V, x_t, info_target.mean_predict)
-            z_predict = robot.sensor.observationModel(x_t, info_target.mean_predict)
+            self.sensor.getJacobian(H, V, x_t, info_target.mean_predict)
+            z_predict = self.sensor.observationModel(x_t, info_target.mean_predict)
             info_target.set_z_predict_and_innovation_covariance(z_predict, H, V)
             info_target.set_gate_volume(level)
 

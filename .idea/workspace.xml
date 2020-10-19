@@ -2,18 +2,18 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="fb424a8f-8274-42c6-b1b1-0f8866416876" name="Default Changelist" comment="">
+      <change afterPath="$PROJECT_DIR$/trackingLib/scripts/plot_experimental_mse.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/trackingLib/scripts/read_simulation_json.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/trackingLib/test/__init__.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/trackingLib/test/simulation_loop.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/trackingLib/config/init_info_planner.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/trackingLib/config/init_info_planner.yaml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/trackingLib/config/planner.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/trackingLib/config/planner.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/trackingLib/config/sensors/bearing.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/trackingLib/config/sensors/bearing.yaml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/trackingLib/config/targetModel.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/trackingLib/config/targetModel.yaml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/trackingLib/dataAssociation.py" beforeDir="false" afterPath="$PROJECT_DIR$/trackingLib/dataAssociation.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/trackingLib/dataAssociationPlan.py" beforeDir="false" afterPath="$PROJECT_DIR$/trackingLib/dataAssociationPlan.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/trackingLib/params.py" beforeDir="false" afterPath="$PROJECT_DIR$/trackingLib/params.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/trackingLib/planner.py" beforeDir="false" afterPath="$PROJECT_DIR$/trackingLib/planner.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/trackingLib/sensor.py" beforeDir="false" afterPath="$PROJECT_DIR$/trackingLib/sensor.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/trackingLib/test/run_sim.py" beforeDir="false" afterPath="$PROJECT_DIR$/trackingLib/test/run_sim.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/trackingLib/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/trackingLib/utils.py" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -37,7 +37,7 @@
     <property name="SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
     <property name="com.intellij.ide.scratch.LRUPopupBuilder$1/New Scratch File" value="Python" />
     <property name="last_opened_file_path" value="$PROJECT_DIR$" />
-    <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
+    <property name="settings.editor.selected.configurable" value="preferences.pathVariables" />
   </component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
@@ -58,7 +58,7 @@
       </list>
     </option>
   </component>
-  <component name="RunManager" selected="Python.read_exp_json">
+  <component name="RunManager" selected="Python.plot_experimental_mse">
     <configuration name="exp_data_tracker" type="PythonConfigurationType" factoryName="Python">
       <module name="filtering" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -93,6 +93,27 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/log/json_test.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="plot_experimental_mse" type="PythonConfigurationType" factoryName="Python">
+      <module name="filtering" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="$USER_HOME$/opt/miniconda3/envs/track_env_36/bin/python3" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/trackingLib/scripts" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/trackingLib/scripts/plot_experimental_mse.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -227,6 +248,27 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
+    <configuration name="read_simulation_json" type="PythonConfigurationType" factoryName="Python">
+      <module name="filtering" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="$USER_HOME$/opt/miniconda3/envs/track_env_36/bin/python3" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/trackingLib/scripts" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/trackingLib/scripts/read_simulation_json.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
     <configuration name="run_sim" type="PythonConfigurationType" factoryName="Python">
       <module name="filtering" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -261,6 +303,27 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test/testRobot_old.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="sim_loop" type="PythonConfigurationType" factoryName="Python">
+      <module name="filtering" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="$USER_HOME$/opt/miniconda3/envs/track_env_36/bin/python3" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/trackingLib/test" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/trackingLib/test/simulation_loop.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -426,6 +489,9 @@
       <item itemvalue="Python.test_data_assoction_plan" />
       <item itemvalue="Python.exp_data_tracker" />
       <item itemvalue="Python.read_exp_json" />
+      <item itemvalue="Python.plot_experimental_mse" />
+      <item itemvalue="Python.sim_loop" />
+      <item itemvalue="Python.read_simulation_json" />
       <item itemvalue="Python.read_exp_json_plan" />
       <item itemvalue="Python.test_config_files" />
       <item itemvalue="Python.run_sim_old" />
@@ -568,25 +634,34 @@
           <option name="timeStamp" value="376" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <condition expression="kk == 36" language="Python" />
-          <url>file://$PROJECT_DIR$/trackingLib/test/run_sim.py</url>
-          <line>103</line>
-          <option name="timeStamp" value="382" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/trackingLib/planner.py</url>
-          <line>233</line>
-          <option name="timeStamp" value="397" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/trackingLib/planner.py</url>
-          <line>343</line>
-          <option name="timeStamp" value="403" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/trackingLib/log/read_exp_json.py</url>
           <line>40</line>
           <option name="timeStamp" value="407" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/trackingLib/test/run_sim.py</url>
+          <line>66</line>
+          <option name="timeStamp" value="408" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/trackingLib/log/read_exp_json.py</url>
+          <line>208</line>
+          <option name="timeStamp" value="421" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/trackingLib/scripts/plot_experimental_mse.py</url>
+          <line>44</line>
+          <option name="timeStamp" value="423" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/trackingLib/test/run_sim.py</url>
+          <line>86</line>
+          <option name="timeStamp" value="424" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/trackingLib/scripts/read_simulation_json.py</url>
+          <line>193</line>
+          <option name="timeStamp" value="425" />
         </line-breakpoint>
       </breakpoints>
       <default-breakpoints>

@@ -9,17 +9,17 @@ final_cost: True
 
 # action parameters
 speed: 0.265
-turn_radius: 0.98
-dt: 3 # seconds
+turn_radius: 0.6
+dt: 1 # seconds
 
 # motor values  used in experiment
 motor_forward_speed: 0.2
 motor_turn_speed: 0.75  # between  0 and 1, fraction of forward speed add/subtract to turn
 
 # filter type in
-#filter_type: kalman
+filter_type: kalman
 #filter_type: JPDAF
-filter_type: JPDAF_merged
+#filter_type: JPDAF_merged
 
 FOV_flag: True
 log_file: log/plan.json

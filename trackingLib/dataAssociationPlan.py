@@ -44,7 +44,7 @@ class JPDAF_simulate:
 
         output = self.update_estimates_no_clutter(association_probability_matrix, measurements, targ_predict_beliefs)
 
-        return output
+        return output, deepcopy(self._z_predict_list)
 
     def update_estimates_no_clutter(self, prob_mat, measurements, targ_predict_beliefs):
         """
@@ -365,6 +365,7 @@ class JPDAF_merged_simulate:
         meas_as_list = []
         for item in meas:
             meas_as_list.append(item.getZ())
+
         return output, meas_as_list
 
     def perform_measurement_update_most_likely(self, full_belief, H_tilde, b_sigma, measurements, z_target_predict, C_k, Omega):

@@ -210,7 +210,8 @@ class SearchState:
                 meas.append(Measurement(predicted_meas, 0, 1))
 
         #now, with measurements, and predicted beliefs, apply the JPDAF
-        filter_output = JPDA_sim.filter(meas, beliefs, ownship)
+        filter_output, predicted_meas = JPDA_sim.filter(meas, beliefs, ownship)
+        self.predicted_meas = predicted_meas
 
         # Take filter output and update state mean and covariance
         targ_num = 0

@@ -207,7 +207,7 @@ class Parameters:
 
     def buildEstimator(self):
 
-        JPDA = DA.JPDAF(detection_prob=self.detection_prob, clutter_density=self.clutter_density,
+        JPDA = DA.JPDAF(sensor=self.sensor, detection_prob=self.detection_prob, clutter_density=self.clutter_density,
                         gate_level=self.gate_level, verbose=self.estimator_verbose)
 
         return JPDA
