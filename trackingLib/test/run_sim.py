@@ -10,7 +10,7 @@ import copy
 
 if __name__ == '__main__':
 
-    # point to file where config folder is locatedß
+    # point to file where config folder is located
     working_directory = '/Users/william.calkins/Documents/Research/Tracking/python/tracking_lib/trackingLib'
 
     p = Parameters(working_directory)
@@ -36,17 +36,12 @@ if __name__ == '__main__':
 
     nearest_neighbor = DA.NearestNeighborFilter(sensor, simulated_time_flag=p.simulated_time_flag)
 
-    #np.random.seed(p.random_seed)
-    seed = int(sys.argv[1])
-    #np.random.seed(p.random_seed)
+    np.random.seed(p.random_seed)
+    #seed = int(sys.argv[1])
     json_data = {}
 
-    print("using seed:  ", seed)
     # Main Loop
     for kk in range(p.Tmax):
-
-        # call plotter before targets robot move to get initial state
-
 
         target_model.forwardSimulate()
 
@@ -62,11 +57,11 @@ if __name__ == '__main__':
             #output = KF.MultiTargetFilter(measurements, robots[i], debug=False)
             #robots[i].tmm.updateBelief(output)
 
-            #JPDAF.filter(measurements, robots[i], robots[i].getState())
+            JPDAF.filter(measurements, robots[i], robots[i].getState())
 
-            #filter_output = JPDAF_merged.filter(measurements, robots[i], robots[i].getState())
+            filter_output = JPDAF_merged.filter(measurements, robots[i], robots[i].getState())
 
-            nearest_neighbor.filter(measurements, robots[i], robots[i].getState())
+            #nearest_neighbor.filter(measurements, robots[i], robots[i].getState())
 
         if kk % (p.n_controls * p.plan_dt) == 0:
             for robot in robots:
@@ -96,13 +91,14 @@ if __name__ == '__main__':
                 print('Applying no control')
             else:
                 print("plan_output length = ", len(planner_output))
-                # old controller for constant dt=1
-                robot.applyControl(planner_output.pop(0), 1)
-                #robot.applyControl([20, 0], 1)
-                steps_into_plan += 1
-                curr_node = optimal_node
-                for i in range(p.horizon - steps_into_plan):
-                    curr_node = curr_node.parent
+
+                if kk % p.plan_dt == 0:
+                    action = planner_output.pop(0)
+                    steps_into_plan += 1
+                    curr_node = optimal_node
+                    for i in range(p.horizon - steps_into_plan):
+                        curr_node = curr_node.parent
+                robot.applyControl(action, 1)
 
 
         plotter.plot_state(robots, robots[0].getState(), target_model.getTargets(), measurements,
@@ -117,15 +113,18 @@ if __name__ == '__main__':
 
 
 
-    #filename = 'planning/merged/2_targ/JPDAF_merged_FOV_final_cost_10_steps_config_2'
+    filename = 'planning/merged/1_targ/JPDAF_merged_plan_dt'
     #filename = 'planning/merged/101020_sims/4_targ_exp_NN_final_cost_log_det_10_steps_turn_radius_0.6_100T'
     #filename = filename + '_seed_' + str(p.random_seed)
-    #plotter.save_video(filename=filename, fps=5)
+    plotter.save_video(filename=filename, fps=5)
 
     #plotter.save_track_stats(filename=filename)
     #track_stats_plotter.save_video(filename='planning/JPDAF/test/2_targ_FVI_log_det_kalman_speed_5_2_stats', fps=5)
     #planner.write_log_file_json(working_directory + '/log/', 'plan_log')
 
+
+    # Write json log data
+    """
     location = '/Users/william.calkins/Documents/Research/Tracking/python/tracking_lib/trackingLib/results/'
     direc = 'sims_icra2021/4targ/NN/'
     filename = location + direc + 'seed_' + str(seed)
@@ -133,3 +132,4 @@ if __name__ == '__main__':
         json.dump(json_data, f, indent=4)
 
     plotter.save_video(filename=filename, fps=5)
+    """

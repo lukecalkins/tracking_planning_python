@@ -9,7 +9,7 @@ targetConfig: config/targetModel.yaml
 plannerConfig: config/planner.yaml
 
 mission_length: 6  # number of planner iterations
-Tmax: 100  # time of  simulation in seconds
+Tmax: 50  # time of  simulation in seconds
 samp: 1.0
 random_seed: 1
 map_min: [-10, -10]
@@ -19,13 +19,13 @@ map_max: [10, 10]
 clutter_density: 0.03183  # 3.183 = 20 per 360 degrees ~ 1 every 18 degrees
 gate_level: 0.99
 estimator_verbose: False
-horizon: 10  # planning horizon
-n_controls: 10  # Re-planning time
+horizon: 5  # planning horizon
+n_controls: 5  # Re-planning time
 sequential_resolution_update_flag: 1  # 0 if resolution update should be done in one step
 
 # Simulation vs real time
 simulated_time_flag: True
 
 # logging information
-tracking_log_json: True
-planning_log_json: True
+tracking_log_json: False
+planning_log_json: False

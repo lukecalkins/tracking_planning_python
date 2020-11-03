@@ -2,17 +2,14 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="fb424a8f-8274-42c6-b1b1-0f8866416876" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/trackingLib/scripts/plot_experimental_mse.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/trackingLib/scripts/read_simulation_json.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/trackingLib/test/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/trackingLib/test/simulation_loop.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/trackingLib/LRDT.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/trackingLib/test/simulate_lrdt.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/trackingLib/config/init_info_planner.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/trackingLib/config/init_info_planner.yaml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/trackingLib/config/planner.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/trackingLib/config/planner.yaml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/trackingLib/config/targetModel.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/trackingLib/config/targetModel.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/trackingLib/dataAssociation.py" beforeDir="false" afterPath="$PROJECT_DIR$/trackingLib/dataAssociation.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/trackingLib/dataAssociationPlan.py" beforeDir="false" afterPath="$PROJECT_DIR$/trackingLib/dataAssociationPlan.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/trackingLib/params.py" beforeDir="false" afterPath="$PROJECT_DIR$/trackingLib/params.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/trackingLib/planner.py" beforeDir="false" afterPath="$PROJECT_DIR$/trackingLib/planner.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/trackingLib/scripts/4_targ_mse.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/trackingLib/target.py" beforeDir="false" afterPath="$PROJECT_DIR$/trackingLib/target.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/trackingLib/test/run_sim.py" beforeDir="false" afterPath="$PROJECT_DIR$/trackingLib/test/run_sim.py" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -58,7 +55,7 @@
       </list>
     </option>
   </component>
-  <component name="RunManager" selected="Python.plot_experimental_mse">
+  <component name="RunManager" selected="Python.run_sim">
     <configuration name="exp_data_tracker" type="PythonConfigurationType" factoryName="Python">
       <module name="filtering" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -354,6 +351,27 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
+    <configuration name="simulate_lrdt" type="PythonConfigurationType" factoryName="Python">
+      <module name="filtering" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="$USER_HOME$/opt/miniconda3/envs/track_env_36/bin/python3" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/trackingLib/test" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/trackingLib/test/simulate_lrdt.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
     <configuration name="test_config_files" type="PythonConfigurationType" factoryName="Python">
       <module name="filtering" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -482,6 +500,7 @@
     </configuration>
     <list>
       <item itemvalue="Python.run_sim" />
+      <item itemvalue="Python.simulate_lrdt" />
       <item itemvalue="Python.test_data_association_merged" />
       <item itemvalue="Python.test_data_association" />
       <item itemvalue="Python.simulate_2targ_merge" />
@@ -640,7 +659,7 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/trackingLib/test/run_sim.py</url>
-          <line>66</line>
+          <line>61</line>
           <option name="timeStamp" value="408" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
@@ -655,13 +674,23 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/trackingLib/test/run_sim.py</url>
-          <line>86</line>
+          <line>81</line>
           <option name="timeStamp" value="424" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/trackingLib/scripts/read_simulation_json.py</url>
           <line>193</line>
           <option name="timeStamp" value="425" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/trackingLib/test/simulate_lrdt.py</url>
+          <line>48</line>
+          <option name="timeStamp" value="426" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/trackingLib/LRDT.py</url>
+          <line>44</line>
+          <option name="timeStamp" value="429" />
         </line-breakpoint>
       </breakpoints>
       <default-breakpoints>

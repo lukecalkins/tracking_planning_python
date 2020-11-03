@@ -88,7 +88,6 @@ class InfoTarget(Target):
         Target.__init__(self, state_init, cov_pos, cov_vel, samp, ID, y_dim, process_noise)
         self.covariance = self.constructNoise(cov_pos_init, cov_vel_init)
 
-
     def getCovariance(self):
         return deepcopy(self.covariance)
 
