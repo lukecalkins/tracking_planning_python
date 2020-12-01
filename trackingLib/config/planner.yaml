@@ -10,7 +10,7 @@ final_cost: True
 # action parameters
 speed: 0.265
 turn_radius: 0.6
-dt: 2 # seconds
+dt: 10  # seconds
 
 # motor values  used in experiment
 motor_forward_speed: 0.2

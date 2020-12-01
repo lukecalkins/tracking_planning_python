@@ -38,6 +38,9 @@ class BearingSensor(Sensor):
     def get_b_sigma(self):
         return self._b_sigma
 
+    def get_probability_of_detection(self):
+        return self._detection_prob
+
     def senseTargets(self, own_state, targets):
 
         output = []
@@ -134,7 +137,7 @@ class BearingSensor(Sensor):
 
 
 
-    def senseTargets_ambiguity(self, own_state, targets):
+    def sense_targets_ambiguity(self, own_state, targets):
         """
         returns contacts in the range 0 to pi measured from the front of the sensor going in either direction
         :param own_state:

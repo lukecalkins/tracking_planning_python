@@ -48,7 +48,7 @@ class Target:
 
     def forwardSimulate(self, steps):
 
-        self._state = self._A.dot(self._state) # + random noise drawn
+        self._state = self._A.dot(self._state) # random noise drawn
 
     def add_fixed_trajectory(self, traj):
         self.trajectory = traj
@@ -183,10 +183,12 @@ class TargetModel:
             target.forwardSimulate(T)
 
             #check for outside mapmin
+            """
             if target.getPosition()[0] <= self.map_coord[0][0] or target.getPosition()[1] <= self.map_coord[0][1]:
                 target._state[2:4] = -1 * target._state[2:4]
             elif target.getPosition()[0] >= self.map_coord[1][0] or target.getPosition()[1] >= self.map_coord[1][1]:
                 target._state[2:4] = -1 * target._state[2:4]
+            """
 
     def forwardSimulate_fixed_trajectory(self, time_step):
         for target in self.targets:

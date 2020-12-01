@@ -3,3 +3,4 @@ trackingLib/results/
 trackingLib/__pycache__/
 trackingLib/log/
 trackingLib/debugging/
+trackingLib/data/

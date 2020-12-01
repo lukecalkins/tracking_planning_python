@@ -65,7 +65,7 @@ class JPDAF:
             beta_0 = prob_mat[-1, i]
             W_k = info_target.filter_gain_matrix
             S_k = info_target.innovation_cov
-            covariance_update = info_target.cov_predict - (1 - beta_0)*W_k @ S_k @ W_k.transpose() + P_k
+            covariance_update = info_target.cov_predict - (1 - beta_0) * W_k @ S_k @ W_k.transpose() + P_k
             mean_update = info_target.mean_predict + W_k @ weighted_innovation
             info_target.updateBelief(mean_update, covariance_update)
 
@@ -389,7 +389,6 @@ if self.log:
         z_dim = self.sensor.z_dim
         y_dim = robot.tmm.targets[0]._y_dim
         b_sigma = self.sensor.get_b_sigma()
-
 
         if self.simulated_time:
             dt = robot.tmm.samp

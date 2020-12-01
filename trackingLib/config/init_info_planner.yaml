@@ -9,14 +9,14 @@ targetConfig: config/targetModel.yaml
 plannerConfig: config/planner.yaml
 
 mission_length: 6  # number of planner iterations
-Tmax: 50  # time of  simulation in seconds
+Tmax: 100  # time of  simulation in seconds
 samp: 1.0
-random_seed: 1
-map_min: [-10, -10]
-map_max: [10, 10]
+random_seed: 2
+map_min: [0, 0]
+map_max: [60, 60]
 
 # Estimator/planner info
-clutter_density: 0.03183  # 3.183 = 20 per 360 degrees ~ 1 every 18 degrees
+clutter_density: 0.3183  # 3.183 = 20 per 360 degrees ~ 1 every 18 degrees
 gate_level: 0.99
 estimator_verbose: False
 horizon: 5  # planning horizon

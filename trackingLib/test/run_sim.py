@@ -57,7 +57,7 @@ if __name__ == '__main__':
             #output = KF.MultiTargetFilter(measurements, robots[i], debug=False)
             #robots[i].tmm.updateBelief(output)
 
-            JPDAF.filter(measurements, robots[i], robots[i].getState())
+            #JPDAF.filter(measurements, robots[i], robots[i].getState())
 
             filter_output = JPDAF_merged.filter(measurements, robots[i], robots[i].getState())
 
@@ -68,7 +68,9 @@ if __name__ == '__main__':
                 planner_output, optimal_node = planner.planFVI(robot.tmm.get_system_belief_copy(), robot.getState(),
                                                                JPDAF_merged.tracking_iterations)
                 steps_into_plan = 0
-                time_on_action = p.plan_dt
+                curr_node = optimal_node
+                action_ndx = 0
+                time_on_action = 0
 
         print("planner output", planner_output)
 
@@ -85,6 +87,11 @@ if __name__ == '__main__':
             time_step_data['own_state'] = robots[i].getState().tolist()
         json_data[kk] = time_step_data
 
+        plotter.plot_state(robots, robots[0].getState(), target_model.getTargets(), measurements,
+                           num_targs_seen=num_targets_seen, timestep=kk,
+                           planner_output=planner_output, robot_size=1, target_size=10, fov=p.fov,
+                           max_range=p.max_range, plan_node=curr_node, plan_dt=p.plan_dt, action_ndx=action_ndx)
+
         for robot in robots:
             if len(planner_output) == 0:
                 robot.applyControl([0,  0], 1)
@@ -93,18 +100,19 @@ if __name__ == '__main__':
                 print("plan_output length = ", len(planner_output))
 
                 if kk % p.plan_dt == 0:
-                    action = planner_output.pop(0)
+                    #action = planner_output.pop(0)
+                    action = planner_output[action_ndx]
                     steps_into_plan += 1
                     curr_node = optimal_node
                     for i in range(p.horizon - steps_into_plan):
                         curr_node = curr_node.parent
                 robot.applyControl(action, 1)
+                time_on_action += 1
+                if time_on_action == p.plan_dt:
+                    action_ndx += 1
+                    time_on_action = 0
 
 
-        plotter.plot_state(robots, robots[0].getState(), target_model.getTargets(), measurements,
-                           num_targs_seen=num_targets_seen, timestep=kk,
-                           planner_output=planner_output, robot_size=1, target_size=10, fov=p.fov,
-                           max_range=p.max_range, plan_node=curr_node)
 
         #track_stats_plotter.plot_stats(robot.tmm.getCovarianceMatrix(), robot.tmm.getTargetState(), targets)
         #plt.pause(0.1)

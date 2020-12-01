@@ -5,10 +5,12 @@ min_range: 0
 max_range: 5000
 min_hang: -180
 max_hang: 180
-#b_sigma: 0.021  # standard deviation in radians
-b_sigma: 0.052
-#b_sigma: 0.35
-detection_prob: 0.99
+#b_sigma: 0.0175 # 1 degree, st.d. in radians
+#b_sigma: 0.021  # 1.5 degrees
+#b_sigma: 0.035  # 2 degrees
+b_sigma: 0.087  # 5 degrees
+#b_sigma: 0.35  # 20 degrees
+detection_prob: 0.5
 unresolved_resolution: 0.1745  # 0.0873 = 5 degrees, 0.1745 = 10 degrees, 0.2618 = 15 degrees, 0.3491 = 20 degrees
 masking_proximity: 10   # relative bearing separationg for target masking to occur
 FOV: 55  # field of view for single side centered at pi/2 (and  -pi/2), given in degrees

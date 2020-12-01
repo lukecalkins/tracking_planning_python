@@ -42,6 +42,7 @@ class StatePlotter:
         self.FOV_flag = FOV_flag
         self.plan_plot_flag = plan_plot_flag
         self.working_directory = working_directory
+        self.steps_into_action = 0  # need to initialize at one because first action take before plotting
         plt.ion()
 
     def draw_env(self):
@@ -151,11 +152,19 @@ class StatePlotter:
             self.ax.plot(a[0, :] + mean[0], a[1, :] + mean[1], clr)
             self.ax.plot(mean[0], mean[1], clr, marker='x')
 
-    def draw_planned_path(self, pose, planner_output):
+    def draw_planned_path(self, pose, planner_output, plan_dt, action_ndx):
         pos_x = [pose[0]]
         pos_y = [pose[1]]
-        for i in range(len(planner_output)):
-            pose = propagateOwnshipEuler(pose, planner_output[i][0], planner_output[i][1], 1)
+        #apply current action for necessary amoutn of steps
+        for i in range(action_ndx, len(planner_output)):
+            if i == action_ndx:
+                steps = plan_dt - self.steps_into_action
+                self.steps_into_action += 1
+                if self.steps_into_action == plan_dt:
+                    self.steps_into_action = 0
+            else:
+                steps = plan_dt
+            pose = propagateOwnshipEuler(pose, planner_output[i][0], planner_output[i][1], steps)
             pos_x.append(pose[0])
             pos_y.append(pose[1])
         self.ax.plot(pos_x, pos_y, 'k-', zorder=3)
@@ -229,7 +238,8 @@ class StatePlotter:
 
 
     def plot_state(self, robots, own_state, targets=None, measurements=None, planner_output=None, num_targs_seen=None, masked=False,
-                   robot_size=1, target_size=1, timestep=None, fov=None, max_range=None, plan_node=None):
+                   robot_size=1, target_size=1, timestep=None, fov=None, max_range=None, plan_node=None, plan_dt=None,
+                   action_ndx=None):
 
         self.clear_plot()
         self.draw_env()
@@ -244,7 +254,7 @@ class StatePlotter:
             if self.FOV_flag:
                 self.draw_fov(self.ax, pose, max_range, fov)
             if planner_output != None:
-                self.draw_planned_path(pose, planner_output)
+                self.draw_planned_path(pose, planner_output, plan_dt,  action_ndx)
             if self.plan_plot_flag:
                 self.draw_planner_belief(plan_node, max_range, fov, clr_list, size=robot_size)
 
