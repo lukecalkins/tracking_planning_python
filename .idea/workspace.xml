@@ -2,18 +2,19 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="fb424a8f-8274-42c6-b1b1-0f8866416876" name="Default Changelist" comment="">
+      <change afterPath="$PROJECT_DIR$/trackingLib/scripts/read_experimental_matlab.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/trackingLib/LRDT.py" beforeDir="false" afterPath="$PROJECT_DIR$/trackingLib/LRDT.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/trackingLib/config/init_info_planner.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/trackingLib/config/init_info_planner.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/trackingLib/config/planner.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/trackingLib/config/planner.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/trackingLib/config/sensors/bearing.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/trackingLib/config/sensors/bearing.yaml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/trackingLib/config/targetModel.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/trackingLib/config/targetModel.yaml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/trackingLib/dataAssociation.py" beforeDir="false" afterPath="$PROJECT_DIR$/trackingLib/dataAssociation.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/trackingLib/plotting.py" beforeDir="false" afterPath="$PROJECT_DIR$/trackingLib/plotting.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/trackingLib/sensor.py" beforeDir="false" afterPath="$PROJECT_DIR$/trackingLib/sensor.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/trackingLib/target.py" beforeDir="false" afterPath="$PROJECT_DIR$/trackingLib/target.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/trackingLib/scripts/planning_comparison.png" beforeDir="false" afterPath="$PROJECT_DIR$/trackingLib/scripts/planning_comparison.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/trackingLib/scripts/plot_experimental_mse.py" beforeDir="false" afterPath="$PROJECT_DIR$/trackingLib/scripts/plot_experimental_mse.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/trackingLib/scripts/read_simulation_json.py" beforeDir="false" afterPath="$PROJECT_DIR$/trackingLib/scripts/read_simulation_json.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/trackingLib/test/run_sim.py" beforeDir="false" afterPath="$PROJECT_DIR$/trackingLib/test/run_sim.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/trackingLib/test/simulate_lrdt.py" beforeDir="false" afterPath="$PROJECT_DIR$/trackingLib/test/simulate_lrdt.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/trackingLib/test/test_data_association_merged.py" beforeDir="false" afterPath="$PROJECT_DIR$/trackingLib/test/test_data_association_merged.py" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -40,7 +41,11 @@
     <property name="settings.editor.selected.configurable" value="preferences.pathVariables" />
   </component>
   <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/trackingLib/data" />
+    </key>
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/trackingLib/data/matlab" />
       <recent name="$PROJECT_DIR$/trackingLib/scripts" />
       <recent name="$PROJECT_DIR$/debugging/extended_state" />
       <recent name="$PROJECT_DIR$/test" />
@@ -58,7 +63,7 @@
       </list>
     </option>
   </component>
-  <component name="RunManager" selected="Python.simulate_lrdt">
+  <component name="RunManager" selected="Python.read_experimental_matlab">
     <configuration name="exp_data_tracker" type="PythonConfigurationType" factoryName="Python">
       <module name="filtering" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -198,6 +203,27 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/trackingLib/log/read_exp_json_plan.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="read_experimental_matlab" type="PythonConfigurationType" factoryName="Python" nameIsGenerated="true">
+      <module name="filtering" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="$USER_HOME$/opt/miniconda3/envs/track_env_36/bin/python3" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/trackingLib" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/trackingLib/scripts/read_experimental_matlab.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -504,6 +530,7 @@
     <list>
       <item itemvalue="Python.run_sim" />
       <item itemvalue="Python.simulate_lrdt" />
+      <item itemvalue="Python.read_experimental_matlab" />
       <item itemvalue="Python.test_data_association_merged" />
       <item itemvalue="Python.test_data_association" />
       <item itemvalue="Python.simulate_2targ_merge" />
@@ -667,22 +694,22 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/trackingLib/scripts/plot_experimental_mse.py</url>
-          <line>44</line>
+          <line>94</line>
           <option name="timeStamp" value="423" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/trackingLib/scripts/read_simulation_json.py</url>
-          <line>193</line>
+          <line>195</line>
           <option name="timeStamp" value="425" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/trackingLib/test/simulate_lrdt.py</url>
-          <line>210</line>
+          <line>214</line>
           <option name="timeStamp" value="426" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/trackingLib/test/run_sim.py</url>
-          <line>89</line>
+          <line>90</line>
           <option name="timeStamp" value="433" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
@@ -691,19 +718,29 @@
           <option name="timeStamp" value="435" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/trackingLib/LRDT.py</url>
-          <line>148</line>
-          <option name="timeStamp" value="445" />
+          <url>file://$PROJECT_DIR$/trackingLib/plotting.py</url>
+          <line>251</line>
+          <option name="timeStamp" value="457" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/trackingLib/scripts/plot_experimental_mse.py</url>
+          <line>61</line>
+          <option name="timeStamp" value="459" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/trackingLib/test/simulate_lrdt.py</url>
-          <line>191</line>
-          <option name="timeStamp" value="447" />
+          <line>187</line>
+          <option name="timeStamp" value="470" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/trackingLib/test/simulate_lrdt.py</url>
           <line>168</line>
-          <option name="timeStamp" value="451" />
+          <option name="timeStamp" value="471" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/trackingLib/LRDT.py</url>
+          <line>143</line>
+          <option name="timeStamp" value="498" />
         </line-breakpoint>
       </breakpoints>
       <default-breakpoints>

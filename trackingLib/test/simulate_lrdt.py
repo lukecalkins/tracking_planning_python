@@ -26,9 +26,10 @@ class PlotterLRDT:
         if self.video:
             self.images = []
 
-    def draw_env(self):
+    def draw_env(self, integrated_sheet):
+        integrated_likelihood_ratio = np.sum(integrated_sheet)
         self.ax_sheet = self.fig.add_subplot(221)
-        self.ax_sheet.set_title('$\Lambda(t, s)$')
+        self.ax_sheet.set_title('$\Lambda(t, s)$' + '\n p(s)/p($\phi$) = ' + str(integrated_likelihood_ratio))
         self.ax_scene = self.fig.add_subplot(222)
         self.ax_scene.set_aspect('equal')
         self.ax_log_sheet = self.fig.add_subplot(223)
@@ -77,7 +78,7 @@ class PlotterLRDT:
 
     def add_image(self, integrated_sheet, measurement_lr_sheet, own_state, targets, measurements):
         self.fig.clf()
-        self.draw_env()
+        self.draw_env(integrated_sheet)
 
         # draw integreated lrdt surface
         sheet = self.ax_sheet.imshow(integrated_sheet, origin='lower')
@@ -161,11 +162,11 @@ if __name__ == '__main__':
 
 
     #define grid space and velocities
-    x_range = np.arange(100)
-    y_range = np.arange(100)
+    x_range = np.linspace(0, 100, 100)
+    y_range = np.linspace(0, 100, 100)
     map_min = [x_range.min(), y_range.min()]
     map_max = [x_range.max(), y_range.max()]
-    speeds = np.arange(0.2, 1.0, .2)
+    speeds = np.arange(0, 1.4, .2)
     num_headings = 24
     velocities = []
     for i in range(num_headings):
@@ -192,20 +193,23 @@ if __name__ == '__main__':
     lrdt.measurement_update(ownship.getState(), y0, sensor)
     plotter.add_image(lrdt.get_integrated_position(), lrdt.measurement_lr_sheet,
                       ownship.getState(), target_model.getTargets(), y0)
+
+    # Main Loop
     T_max = 40
-    action = [1, 1./50]
+    action = [1, 1./5]
     for i in range(T_max):
         target_model.forwardSimulate(1)
         ownship.applyControl(action, 1)
         y = sense_bearing_contacts(ownship.getState(), target_model, sensor, clutter_density)
         lrdt.motion_update(1)
         lrdt.measurement_update(ownship.getState(), y, sensor)
+        lrdt.call_detections()
         plotter.add_image(lrdt.get_integrated_position(), lrdt.measurement_lr_sheet,
                           ownship.getState(), target_model.getTargets(), y)
         print("timestep: " + str(i))
 
-    directory = 'results/videos/lrdt/1targ/endfire/'
-    filename = 'lrdt_cd_0.3183_bsigma_0.087_Pd_0.5_turning_left_slow'
+    directory = 'results/videos/lrdt/detector/'
+    filename = 'cd_0.637_bsigma_0.087_Pd_0.5_turnR_5'
     plotter.save_video(directory, filename, fps=1)
 
     print("Exiting Main")

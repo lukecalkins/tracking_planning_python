@@ -2,16 +2,16 @@
 targ_dim: 4
 IDs: [0, 1, 2, 3, 4, 5, 6, 7]
 y0: # initial states of targets
-  - [90, 45, -1, 0]
-#  - [15, 15, 1, 0]
+  - [75, 75, -1, 0]
+#  - [-500, 750, 10, -2.5]
 #  - [-2.5, -5, 0.1, 0]
 #  - [-5, -7.5, 0.1, 0]
 #  - [-750, 80, -20, 10]
 #  - [-750, -10, 0, 0]
 #  - [-750, 40, -20, -10]
 
-cov_pos: 0.1  # prior covariance in position
-cov_vel: 0.001  # prior covariance in velocity
+cov_pos: 10000 # prior covariance in position
+cov_vel: 1  # prior covariance in velocity
 process_cov_pos: 5  # covariance in the position in the target motion model
 process_cov_vel: 0.1 # covariance in velocity in target motion model
-process_noise: 0.00001 # constant used as multiplier in process noise covariance  (variance of acceleration disturbanc)
+process_noise: 0.1 # constant used as multiplier in process noise covariance  (variance of acceleration disturbanc)

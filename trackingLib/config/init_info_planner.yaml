@@ -1,6 +1,6 @@
 ---
 Robots:
-- initial_state: [6.7, 7.22, 3.14]   # pi/2 = 1.57080, pi/4 = 0.7854
+- initial_state: [0, 0, 0]   # pi/2 = 1.57080, pi/4 = 0.7854
 #  sensorConfig: config/sensors/bearing.yaml
   dynamicsConfig: config/dynamics/dubins_car.yaml
 
@@ -9,14 +9,14 @@ targetConfig: config/targetModel.yaml
 plannerConfig: config/planner.yaml
 
 mission_length: 6  # number of planner iterations
-Tmax: 100  # time of  simulation in seconds
+Tmax: 80  # time of  simulation in seconds
 samp: 1.0
 random_seed: 2
-map_min: [0, 0]
-map_max: [60, 60]
+map_min: [-1000, -250]
+map_max: [1000, 1000]
 
 # Estimator/planner info
-clutter_density: 0.3183  # 3.183 = 20 per 360 degrees ~ 1 every 18 degrees
+clutter_density: 0.637  # 3.183 = 20 per 360 degrees = 1 every 18 degrees
 gate_level: 0.99
 estimator_verbose: False
 horizon: 5  # planning horizon

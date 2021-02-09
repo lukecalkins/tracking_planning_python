@@ -81,7 +81,7 @@ if __name__ == '__main__':
                     targ_true = np.array(ts_data['ground_truth'][start:stop])
                     post_cov = np.array(ts_data['post_covariance'])[start:stop, start:stop]
                     mse_array_jpdam[j, i] = mse_array_nn[j, i] + np.linalg.norm(targ_est[0:2] - targ_true[0:2])
-                    lds_array_jpdam[j, i] = lds_array_jpdam[j, i] + np.log(np.linalg.det(post_cov))
+                    #lds_array_jpdam[j, i] = lds_array_jpdam[j, i] + np.log(np.linalg.det(post_cov))
             file_count += 1
     mse_array_jpdam = 1. / file_count * mse_array_jpdam
     lds_array_jpdam = 1./ file_count * lds_array_jpdam
@@ -145,7 +145,7 @@ if __name__ == '__main__':
     curr_own_state = [6.7, 7.22, 3.14]  # initial starting state
     with open(file) as f:
         sim_data = json.load(f)
-    #create target trajecotries
+    #create target trajecotriesd
     for i in range(len(sim_data)):
         ts_data = sim_data[str(i)]
         for k in range(num_targs):
@@ -186,10 +186,12 @@ if __name__ == '__main__':
     ax.plot(own_states[0, :], own_states[1, :], c='k', label='Algorithm 3')
     ax.plot(6.7, 7.22, c='k', marker='.',  markersize=20)
     ax.plot(own_states_nn[0, :], own_states_nn[1, :], c='k', linestyle='--', label='FVI')
+    ax.set_xlabel('x (meters)')
+    ax.set_ylabel('y (meters)')
     ax.legend()
     ax.set_title('Planning Trajectory Comparison')
     plt.tight_layout()
-    #plt.show()
+    plt.show()
     plt.savefig('planning_comparison.png', format='png')
     a = 3
 

@@ -39,7 +39,7 @@ if False:
 map_min = p.map_min
 map_max = p.map_max
 title = "Kalman Filter test"
-plotter = StatePlotter(map_min, map_max, title, video=True, track_stats_flag=False, meas_plot_flag=True, FOV_flag=True,
+plotter = StatePlotter(map_min, map_max, title, video=True, track_stats_flag=False, meas_plot_flag=False, FOV_flag=False,
                        working_directory=p.working_directory)
 data_saver = DataSaver(p.num_targs)
 
@@ -67,27 +67,27 @@ for kk in range(p.Tmax):
 
     for i in range(len(robots)):
         #measurements, num_targets_seen = sensor.senseTargets(robots[i].getState(), target_model.getTargets())
-        #measurements, num_targets_seen = sensor.senseTargets_interference_n(robots[i].getState(), target_model.getTargets(), p.masking_proximity)
+        measurements, num_targets_seen = sensor.senseTargets_interference_n(robots[i].getState(), target_model.getTargets(), p.masking_proximity)
         #measurements, num_targets_seen = sensor.senseTargets_resolution_model_2(robots[i].getState(), target_model.getTargets(), p.unresolved_resolution)
-        measurements, num_targets_seen = sensor.senseTargets_resolution_model_n(robots[i].getState(), target_model.getTargets(), p.unresolved_resolution)
+        #measurements, num_targets_seen = sensor.senseTargets_resolution_model_n(robots[i].getState(), target_model.getTargets(), p.unresolved_resolution)
         for meas in measurements:
             print(meas.getZ())
         #measurements, num_targets_seen = sensor.senseTargets_ambiguity(robots[i].getState(), target_model.getTargets())
         #measurements, num_targets_seen = sensor.senseTargets_FOV(robots[i].getState(), target_model.getTargets())
         #add_clutter(measurements, p.clutter_density)
 
-        #JPDAF.filter(measurements, robots[i])
+        JPDAF.filter(measurements, robots[i], robots[i].getState())
 
         #JPDAF_ambiguity.filter(measurements, robots[i])
 
-        filter_output = JPDAF_merged.filter(measurements, robots[i], robots[i].getState())
+        #filter_output = JPDAF_merged.filter(measurements, robots[i], robots[i].getState())
 
         output = robots[0].tmm.get_system_belief_copy()
-        print("mean:  ", output._mean)
-        print("covariance:  ", output._cov)
+        #print("mean:  ", output._mean)
+        #print("covariance:  ", output._cov)
 
     plotter.plot_state(robots, robots[0].getState(), target_model.getTargets(), measurements, num_targs_seen=num_targets_seen,
-                       robot_size=1, target_size=10, timestep=kk, fov=p.fov, max_range=p.max_range)
+                       robot_size=50, target_size=10, timestep=kk, fov=p.fov, max_range=p.max_range)
 
     #plt.pause(0.1)
 
@@ -96,13 +96,13 @@ for kk in range(p.Tmax):
     print("Timstep: ", kk)
 
 
-dir = 'JPDAF/merged/exp_compare/'
-file_name = 'single_targ_fixed_traj_bsigma_5_q_0.01'
+dir = 'JPDAF/auma_presentation/'
+file_name = 'interference'
 file_name = file_name + '_seed_' + str(p.random_seed)
 plotter.save_video(filename=dir + file_name, fps=5)
 
-json_filename = '/log/' + file_name
-JPDAF_merged.write_log_file_json(p.working_directory, json_filename)
+#json_filename = '/log/' + file_name
+#JPDAF_merged.write_log_file_json(p.working_directory, json_filename)
 
 #data_saver.write_data_to_file(file_name)
 #p.write_params_to_file(dir)

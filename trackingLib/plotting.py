@@ -28,7 +28,7 @@ class StatePlotter:
     def __init__(self, mapmin, mapmax, title, plotNum=1, video=False, track_stats_flag=False, meas_plot_flag=False,
                  FOV_flag=False, plan_plot_flag=False, working_directory=None):
 
-        self.fig = plt.figure(plotNum, figsize=(16, 8))
+        self.fig = plt.figure(plotNum, figsize=(8, 8))
         self.mapmin = mapmin
         self.mapmax = mapmax
         self.title = title

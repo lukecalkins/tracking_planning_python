@@ -3,6 +3,7 @@ import trackingLib.dataAssociation as DA
 from trackingLib.cost_function import *
 from trackingLib.params import Parameters
 import trackingLib.dataAssociation_ambiguity as DA_amb
+import trackingLib.kalmanFilter as KF
 import sys
 import json
 import copy
@@ -54,10 +55,10 @@ if __name__ == '__main__':
             measurements, num_targets_seen = sensor.senseTargets_resolution_model_n_FOV(robots[i].getState(), target_model.getTargets(), p.unresolved_resolution)
             #add_clutter(measurements, p.clutter_density)
 
-            #output = KF.MultiTargetFilter(measurements, robots[i], debug=False)
-            #robots[i].tmm.updateBelief(output)
+            output = KF.MultiTargetFilter(measurements, robots[i], debug=False)
+            robots[i].tmm.updateBelief(output)
 
-            #JPDAF.filter(measurements, robots[i], robots[i].getState())
+            JPDAF.filter(measurements, robots[i], robots[i].getState())
 
             filter_output = JPDAF_merged.filter(measurements, robots[i], robots[i].getState())
 

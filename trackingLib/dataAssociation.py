@@ -372,7 +372,7 @@ class JPDAFMerged:
 
         self.console_log = console_log
 
-    def filter(self, measurements, robot, own_state, state_iteration=None, contact_iteration=None):
+    def ofilter(self, measurements, robot, own_state, state_iteration=None, contact_iteration=None):
         """
         fully external functioning JPDAF filter without clutter and with perfect detections
         :param measurements: measurement list

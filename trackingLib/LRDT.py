@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy import ndimage
 
 def restrict_angle(phi, min_range=-np.pi, max_range=np.pi):
     x = phi - min_range
@@ -85,6 +86,18 @@ class LRDT:
             self.vel_sheets[i].lr = self.vel_sheets[i].lr * measurement_lr_sheet
 
 
+    def call_detections(self):
+        """
+        function that thresholds the integrated lrdt surface and calls detections and resets surface accordingly
+        :return:
+        """
+
+        # get position sheet by integrating over velocity
+        integrated_sheet = self.get_integrated_position()
+
+        convolved_sheet = self.convolve_lr_sheet(integrated_sheet)
+
+        return None
 
     def get_integrated_position(self):
         """
@@ -96,6 +109,41 @@ class LRDT:
             integrated_sheet += vel_sheet.lr
 
         return integrated_sheet
+
+    def convolve_lr_sheet(self, integrated_sheet):
+
+        # find peak
+        X, Y = np.meshgrid(self.x_range, self.y_range)
+        map_min = (self.x_range[0], self.y_range[0])
+        map_max = (self.x_range[-1], self.y_range[-1])
+        ndx = np.unravel_index(integrated_sheet.argmax(), integrated_sheet.shape)
+        fig, ax = plt.subplots()
+        ax.imshow(integrated_sheet, origin='lower', extent=(map_min[0], map_max[0], map_min[1], map_max[1]))
+        peak_position = (X[ndx[0], ndx[1]], Y[ndx[0], ndx[1]])
+        ax.plot(X[ndx[0], ndx[1]], Y[ndx[0], ndx[1]], marker='*', c='r')
+
+        #plt.show()
+
+        #use gaussian effectiveness function
+        sigma_kernel = 200
+        num_pixels = 10
+        kernel_x_range = (ndx[0] - num_pixels, ndx[0] + num_pixels + 1)
+        kernel_y_range = (ndx[1] - num_pixels, ndx[1] + num_pixels + 1)
+        E_ij = -1. / (2 * sigma_kernel ** 2) * ((X - peak_position[0]) ** 2 + (Y - peak_position[1]) ** 2)
+        #E_ij = -1. / (2 * sigma_kernel ** 2) * ((X[kernel_x_range[0]:kernel_x_range[1], kernel_y_range[0]:kernel_y_range[1]] - peak_position[0]) ** 2 +
+        #                                        (Y[kernel_x_range[0]:kernel_x_range[1], kernel_y_range[0]:kernel_y_range[1]] - peak_position[1]) ** 2)
+        E_ij = np.exp(E_ij)
+        fig, ax = plt.subplots()
+        E_ij_sheet = ax.imshow(E_ij, origin='lower', extent=(map_min[0], map_max[0], map_min[1], map_max[1]))
+        #E_ij_sheet = ax.imshow(E_ij, origin='lower', extent=(self.x_range[kernel_x_range[0]], self.x_range[kernel_x_range[1]], self.y_range[kernel_y_range[0]], self.y_range[kernel_y_range[1]]))
+        fig.colorbar(E_ij_sheet, ax=ax)
+        #convolved_image = ndimage.convolve(integrated_sheet, E_ij, mode='constant', cval=0.0)
+        output_image = E_ij * integrated_sheet
+        output_sum = np.sum(output_image)
+
+        fig, ax = plt.subplots()
+        ax.imshow(output_image, origin='lower', extent=(map_min[0], map_max[0], map_min[1], map_max[1]))
+        ax.set_title(str(output_sum))
 
     def plot_vel_sheet(self, sheet_index, log_sheet=False):
         sheet = self.vel_sheets[sheet_index]
@@ -128,19 +176,19 @@ class VelocitySheet:
         translate_x = 0
         translate_y = 0
         if self.counter_x > self.cell_width_x:
-            self.counter_x = self.counter_x - self.cell_width_x
-            translate_x = 1
+            translate_x = np.floor(self.counter_x / self.cell_width_x)
+            self.counter_x = self.counter_x - translate_x * self.cell_width_x
         if self.counter_x < -1 * self.cell_width_x:
-            self.counter_x = self.counter_x + self.cell_width_x
-            translate_x = -1
+            translate_x = np.ceil(self.counter_x / self.cell_width_x)
+            self.counter_x = self.counter_x - translate_x * self.cell_width_x
         if self.counter_y > self.cell_width_y:
-            self.counter_y = self.counter_y - self.cell_width_y
-            translate_y = 1
+            translate_y = np.floor(self.counter_y / self.cell_width_y)
+            self.counter_y = self.counter_y - translate_y * self.cell_width_y
         if self.counter_y < -1 * self.cell_width_y:
-            self.counter_y = self.counter_y + self.cell_width_y
-            translate_y = -1
+            translate_y = np.ceil(self.counter_y / self.cell_width_y)
+            self.counter_y = self.counter_y - translate_y * self.cell_width_y
 
-        translate = (translate_x, translate_y)
+        translate = (int(translate_x), int(translate_y))
         # add or remove rows/columns as necessary
         if translate_x != 0 or translate_y != 0:
             self.translate_cells(translate)
