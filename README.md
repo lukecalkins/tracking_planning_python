@@ -14,7 +14,11 @@ Below shows the proposed algorithm (Algorithm 3) compared to a forward valu
 
 <h3>Forward Value Iteration with nearest neighbor data association</h3>
 <p>Optional description for the video.</p>
-<video src="[https://github.com/user-attachments/assets/c012f9bb-62db-4047-86e3-3a3953f41ec](https://github.com/user-attachments/assets/3809a54b-5c05-49d2-bd2b-f3bb25b1b34f)9" controls width="100%"></video>
+<video src="https://github.com/user-attachments/assets/c9161cd9-9ad9-45e7-812c-85a85daeeae1" controls width="100%"></video>
+
+
+
+
 
 
 
