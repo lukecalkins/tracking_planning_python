@@ -11,8 +11,12 @@ Below shows the proposed algorithm (Algorithm 3) compared to a forward valu
 <p>Optional description for the video.</p>
 <video src="https://github.com/user-attachments/assets/c012f9bb-62db-4047-86e3-3a3953f41ec9" controls width="100%"></video>
 
-![Forward Value Iteation planning with Joint probabilistic data association with merged measurement tracking]
-(https://github.com/user-attachments/assets/c012f9bb-62db-4047-86e3-3a3953f41ec9)
+
+<h3Forward Value Iteration with nearest neighbor data association</h3>
+<p>Optional description for the video.</p>
+<video src="[https://github.com/user-attachments/assets/c012f9bb-62db-4047-86e3-3a3953f41ec](https://github.com/user-attachments/assets/3809a54b-5c05-49d2-bd2b-f3bb25b1b34f)9" controls width="100%"></video>
+
+
 
 
 ![Forward Value Iteation planning with nearest neighbor data associating tracking](https://github.com/user-attachments/assets/0ca92933-ff7a-4b0b-afe0-b75e69ff4cda)
