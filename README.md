@@ -5,6 +5,8 @@ The merged measurement joint probabilistic data filter  trackingn system incopor
 
 The algorithm outlined in the above paper was implemented onboard a ground vehicle using cameras acting acting as bearinng-only sensors. The vehicle observes the other two target vehicles, updates its estimate of their locationn and vellocity and then plans a trajecotry in order to reduce uncertainty in the estimates of the targets.
 
+[![Watch the video](https://github.com/user-attachments/assets/7594acb5-110b-450d-ab8b-967921f91150)](https://vimeo.com/manage/videos/1177905287)
+
 
 Below shows the proposed algorithm (Algorithm 3) compared to a forward valu
 ![Planning image](./trackingLib/results/planning_comparison.png)
