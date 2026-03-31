@@ -3,7 +3,7 @@ This repository provides a simulation environment for multi-target tracking usin
 A merged measurement sensor model was incorpoarted into a joint probabilistic data association filter in order to track multiple moving targets through merging events. The merged measurements were also incorporated into a forward value iteration planner in order to plan a trajectory for the sensor that biases the trajectory away from regions where target measurements would merge, as this leads to larger uncertainties in targets' states. This work was published in IEEE Robotics and Automation Letters in 2021
 [Bearing-only active sensing under merged measurements](https://ieeexplore.ieee.org/iel7/7083369/7339444/09385895.pdf?casa_token=T-hbddLM0kcAAAAA:1gBppiq_1IR4VO1_psDwJH6IivvdfFyfWg9AobVE641ImGL_YhMyJZwztm404xRWay7Y2r6ftII)
 
-The algorithm outlined in the above paper was implemented onboard a ground vehicle using cameras acting as bearing-only sensors. The vehicle observes the other two target vehicles, updates its estimate of targetss locations and velocities, and then plans a trajectory in order to reduce uncertainty in the estimates of the targets.
+The algorithm outlined in the above paper was implemented onboard a ground vehicle using cameras acting as bearing-only sensors. The vehicle observes the other two target vehicles, updates its estimate of targets' locations and velocities, and then plans a trajectory in order to reduce uncertainty in the estimates of the targets.
 
 [![Watch the video](https://github.com/user-attachments/assets/7594acb5-110b-450d-ab8b-967921f91150)](https://vimeo.com/manage/videos/1177905287)
 
